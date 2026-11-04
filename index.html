@@ -26,7 +26,7 @@
       --text: #eef0f5; --muted: #9ba3b4; --faint: #6c7586;
       --accent: #f5a524; --accent-ink: #1b1300; --accent-text: #f5a524;
       --blue: #8b99ff; --green: #4cd08e; --red: #ff7b7b; --blue-ink: #c9d0ff; --red-ink: #ffc9c9;
-      --line2: #363c4a; --line3: var(--line3); --ph: var(--ph); --hover: rgba(255,255,255,.07); --track: #262c39;
+      --inp: #0e1015; --amber: #e3a42a; --line2: #363c4a; --line3: var(--line3); --ph: var(--ph); --hover: rgba(255,255,255,.07); --track: #262c39;
       --bg-rgb: 11,12,16; --navbg: rgba(11,12,16,.9); --sbox: rgba(11,12,16,.55); --shadow: rgba(0,0,0,.45);
       --hero1: rgba(24,29,69,.62); --hero2: rgba(15,18,38,.35); --pl1: 30%; --pl2: 13%;
       --bs-body-font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -38,7 +38,7 @@
       --text: #161a24; --muted: #596175; --faint: #8a92a5;
       --accent: #f0a020; --accent-ink: #1b1300; --accent-text: #a45f00;
       --blue: #4656d4; --green: #12804a; --red: #c53030; --blue-ink: #3441a8; --red-ink: #8f2222;
-      --line2: #c9cedc; --line3: #aab1c3; --ph: #99a1b3; --hover: rgba(20,30,60,.06); --track: #dfe3ee;
+      --inp: #f1f3f9; --amber: #b9780a; --line2: #c9cedc; --line3: #aab1c3; --ph: #99a1b3; --hover: rgba(20,30,60,.06); --track: #dfe3ee;
       --bg-rgb: 246,247,251; --navbg: rgba(246,247,251,.92); --sbox: rgba(255,255,255,.75); --shadow: rgba(30,40,80,.16);
       --hero1: rgba(230,233,255,.7); --hero2: rgba(246,247,251,.35); --pl1: 44%; --pl2: 30%;
       --bs-body-bg: var(--bg); --bs-body-color: var(--text); --bs-border-color: var(--line);
@@ -255,6 +255,56 @@
     [data-bs-theme="dark"] body::before { filter: saturate(.75); }
     [data-bs-theme="light"] body::before { filter: saturate(.85); }
 
+
+    /* ---------- Catatan penolakan, etalase katalog, detail penyedia ---------- */
+    .cat-box { margin-top: .6rem; border-radius: 8px; padding: .55rem .7rem; font-size: .8rem; border-left: 3px solid var(--blue); background: rgba(139,153,255,.12); }
+    .cat-box.tolak { border-left-color: var(--red); background: rgba(255,123,123,.12); }
+    .cat-h { font-weight: 800; margin-bottom: .2rem; display: flex; gap: .35rem; align-items: center; }
+    .cat-box.tolak .cat-h { color: var(--red); } .cat-box.revisi .cat-h { color: var(--blue); }
+    .cat-t, .cat-i { white-space: pre-wrap; word-break: break-word; margin-top: .15rem; }
+    .cat-hint { font-size: .74rem; color: var(--faint); margin-top: .5rem; }
+    .etalase { display: block; position: relative; aspect-ratio: 16 / 9; margin-top: .6rem; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--card2); color: var(--text); text-decoration: none; }
+    .etalase img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+    .etalase .et-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: .35rem .6rem; font-size: .74rem; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,.72), transparent); }
+    .etalase .et-fb { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; text-align: center; padding: .5rem 1rem; font-size: .78rem; color: var(--muted); }
+    .etalase.gagal img { display: none; } .etalase.gagal .et-fb { display: flex; }
+    .etalase:hover { border-color: var(--accent); }
+    .etalase.kosong { display: flex; align-items: center; justify-content: center; gap: .4rem; aspect-ratio: auto; padding: .7rem; font-size: .78rem; color: var(--faint); border-style: dashed; }
+    .link-prev { margin-top: .6rem; max-width: 340px; } .link-prev .etalase { margin-top: 0; }
+    .tbl tbody tr.klik { cursor: pointer; } .tbl tbody tr.klik:hover { background: var(--hover); } .tbl tbody tr.klik:focus-visible { outline-offset: -3px; }
+    .item-row { padding: .5rem 0; border-bottom: 1px solid var(--line); } .item-row:last-child { border-bottom: 0; }
+    .item-alasan { margin-top: .4rem; background: var(--bg2); border: 1px solid var(--line); color: var(--text); font-size: .88rem; }
+    .item-alasan:focus { background: var(--bg2); color: var(--text); border-color: var(--accent); box-shadow: none; }
+    .dp-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .7rem; margin-bottom: .8rem; }
+    .dp-sum .k { font-size: .72rem; color: var(--muted); } .dp-sum .v { font-weight: 800; font-size: 1.05rem; }
+    .dp-opd-row { display: flex; justify-content: space-between; gap: 1rem; font-size: .84rem; padding: .3rem 0; border-bottom: 1px dashed var(--line); }
+    .dp-item { border: 1px solid var(--line); border-radius: 10px; padding: .75rem .9rem; margin-top: .7rem; background: var(--bg2); }
+    .dp-item.mati { opacity: .6; }
+    .dp-top { display: flex; justify-content: space-between; align-items: center; gap: .6rem; flex-wrap: wrap; }
+    .dp-opd { font-weight: 800; } .dp-opd small { font-weight: 500; color: var(--muted); }
+    .dp-nama { font-weight: 700; margin: .2rem 0; }
+    .dp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .3rem .9rem; font-size: .82rem; color: var(--muted); } .dp-grid b { color: var(--text); }
+
+
+    /* ---------- Isian berkotak: jelas mana yang kosong dan mana yang sudah diisi ---------- */
+    .fld .form-control, .fld .form-select { background-color: var(--inp); border: 1.5px solid var(--line2); border-radius: 8px; padding: .55rem .8rem; box-shadow: none; }
+    .fld .form-select { padding-right: 2.2rem; }
+    .fld .form-control:focus, .fld .form-select:focus { background-color: var(--inp); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,165,36,.22); }
+    .rp-wrap { align-items: center; gap: .6rem; }
+    #formPengajuan .fld:has(:required) > label::after { content: " *"; color: var(--red); }
+    #formPengajuan .fld .form-control:required:invalid, #formPengajuan .fld .form-select:required:invalid {
+      border: 1.5px dashed var(--amber); background-color: color-mix(in srgb, var(--amber) 8%, var(--inp)); }
+    #formPengajuan .fld .form-control:required:valid, #formPengajuan .fld .form-select:required:valid {
+      border: 1.5px solid var(--green); background-color: color-mix(in srgb, var(--green) 9%, var(--inp)); }
+    #formPengajuan .fld .form-control:focus, #formPengajuan .fld .form-select:focus { border-style: solid; border-color: var(--accent); }
+    #pickList .file-pick { padding: .8rem .9rem; border: 1.5px dashed var(--amber); border-radius: 8px; background: color-mix(in srgb, var(--amber) 8%, var(--inp)); }
+    #pickList .file-pick.terisi { border: 1.5px solid var(--green); background: color-mix(in srgb, var(--green) 9%, var(--inp)); }
+    #pickList .fp-link { border: 0; border-bottom: 1.5px solid var(--line2); }
+    .legend-isi { display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; align-items: center; font-size: .78rem; color: var(--muted); margin: -.4rem 0 1.1rem; }
+    .legend-isi .lg { display: inline-block; width: 22px; height: 12px; border-radius: 4px; margin-right: .35rem; vertical-align: -1px; }
+    .lg-kosong { border: 1.5px dashed var(--amber); background: color-mix(in srgb, var(--amber) 12%, var(--inp)); }
+    .lg-isi { border: 1.5px solid var(--green); background: color-mix(in srgb, var(--green) 14%, var(--inp)); }
+
     /* ---------- Tema: tombol ganti ---------- */
     .btn-tema { width: 36px; height: 36px; padding: 0; display: inline-grid; place-items: center; border-radius: 50%; }
     [data-bs-theme="dark"] .ic-moon, [data-bs-theme="light"] .ic-sun { display: none; }
@@ -349,11 +399,13 @@
         <div><h2 class="sec-title" id="formTitle">Formulir pengajuan</h2><p class="small-note mb-0" id="formSub"></p></div>
         <button type="button" class="btn btn-line btn-sm align-self-start" id="btnBatalEdit">Tutup</button>
       </div>
+      <div class="legend-isi"><span><i class="lg lg-kosong"></i>Belum diisi (garis putus-putus kuning)</span><span><i class="lg lg-isi"></i>Sudah diisi (garis hijau)</span><span>* wajib diisi</span></div>
       <form id="formPengajuan" autocomplete="off">
         <div class="row g-4">
           <div class="col-lg-6">
             <div class="fld"><label for="fNama">Nama paket</label><input class="form-control" id="fNama" required maxlength="200"></div>
             <div class="fld"><label for="fPenyedia">Calon penyedia</label><select class="form-select" id="fPenyedia" required><option value="">Memuat daftar...</option></select></div>
+            <div class="fld"><label for="fLink">Link katalog penyedia</label><input class="form-control" id="fLink" type="url" required maxlength="500" placeholder="Tempel link etalase penyedia dari katalog"><div class="small-note mt-1">Buka etalase penyedia di katalog, salin alamatnya, lalu tempel di sini.</div><div class="link-prev" id="linkPrev"></div></div>
             <div class="fld">
               <label for="fHps">Nilai HPS</label>
               <div class="rp-wrap"><span class="rp">Rp</span><input class="form-control" id="fHps" inputmode="numeric" placeholder="0" required></div>
@@ -435,14 +487,15 @@
 
 <!-- =============================== MODAL: SETUJUI / TOLAK / REVISI =============================== -->
 <div class="modal fade" id="modalAksi" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="aksiJudul"></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
       <div class="modal-body">
-        <div class="mb-4" id="aksiInfo"></div>
+        <div class="mb-3" id="aksiInfo"></div>
+        <div class="mb-3" id="aksiItems"></div>
         <div class="fld mb-1"><label for="aksiCatatan" id="aksiLabel">Catatan</label><textarea class="form-control" id="aksiCatatan" rows="3" maxlength="800"></textarea></div>
         <div class="small-note" id="aksiHint"></div>
       </div>
@@ -494,6 +547,19 @@
   </div>
 </div>
 
+<!-- =============================== MODAL: DETAIL PENYEDIA =============================== -->
+<div class="modal fade" id="modalPen" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div><h5 class="modal-title" id="dpJudul"></h5><div class="small-note">Rincian pengajuan untuk penyedia ini</div></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body" id="dpBody"></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container position-fixed top-0 end-0 p-3" id="toasts" style="z-index:2000"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -507,6 +573,7 @@ const LIMIT = 15000000000;                       // batas HPS per penyedia (usah
 const UKURAN_HALAMAN = 24;                       // jumlah kartu per permintaan
 const JENIS_DOK = { kak: 'KAK / Spesifikasi teknis', kertas: 'Kertas kerja e-purchasing', hps: 'HPS' };
 const DOK_PENDEK = { kak: 'KAK', kertas: 'Kertas kerja', hps: 'HPS' };
+const ITEM_TOLAK = { kak: 'KAK / Spesifikasi teknis', kertas: 'Kertas kerja e-purchasing', hps: 'HPS', penyedia: 'Calon penyedia', link: 'Link katalog penyedia' };
 const MAKS_MB = 5, EKSTENSI_OK = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
 const SESSION_KEY = 'pengajuan_sesi';
 
@@ -544,7 +611,7 @@ const store = (function () {
 
 const state = { token: null, username: null, role: null, ringkasan: null, list: [], total: 0, halaman: 1, memuat: false, reqId: 0,
                 filter: '', cari: '', tab: 'pengajuan', penyedia: null, pen: { nama: '', total: 0, jumlah: 0, ada: false },
-                satker: '', ref: null, akun: null, editingId: null, dokId: null, konfirmasiAksi: null, klarId: null, klarTimer: null, klarSig: '' };
+                satker: '', ref: null, akun: null, detId: 0, editingId: null, dokId: null, konfirmasiAksi: null, klarId: null, klarTimer: null, klarSig: '' };
 
 function toast(msg, type) {
   const el = document.createElement('div');
@@ -757,6 +824,27 @@ function dokChips(p) {
     : '<span class="dchip no"><i class="bi bi-exclamation-circle"></i> ' + DOK_PENDEK[k] + ' belum ada</span>').join('');
 }
 
+/* ---------- Etalase katalog (pratinjau gambar halaman) dan catatan penolakan ---------- */
+const urlAman = u => /^https?:\/\/\S{4,}$/i.test(String(u || '').trim());
+const thumbUrl = u => 'https://s.wordpress.com/mshots/v1/' + encodeURIComponent(u) + '?w=640&h=360';
+function etalase(link) {
+  if (!urlAman(link)) return '<div class="etalase kosong"><i class="bi bi-shop"></i> Link katalog belum diisi</div>';
+  const l = String(link).trim();
+  return '<a class="etalase" href="' + esc(l) + '" target="_blank" rel="noopener noreferrer" title="Buka etalase penyedia di katalog">' +
+    '<img loading="lazy" src="' + esc(thumbUrl(l)) + '" alt="Pratinjau etalase katalog" onerror="this.parentNode.classList.add(\'gagal\')">' +
+    '<span class="et-fb">Pratinjau belum tersedia. Klik untuk membuka katalog.</span>' +
+    '<span class="et-cap"><i class="bi bi-box-arrow-up-right"></i> Etalase katalog</span></a>';
+}
+function catatanBox(p) {
+  if (p.Status !== 'Revisi' && p.Status !== 'Ditolak') return '';
+  const tolak = p.Status === 'Ditolak', it = p.CatatanItem || {};
+  const ks = Object.keys(ITEM_TOLAK).filter(k => it[k]);
+  if (!p.Catatan_Umum && !ks.length) return '<div class="cat-hint"><i class="bi bi-chat-left-text"></i> Alasan ' + (tolak ? 'penolakan' : 'revisi') + ' ada di Klarifikasi.</div>';
+  return '<div class="cat-box ' + (tolak ? 'tolak' : 'revisi') + '"><div class="cat-h"><i class="bi bi-exclamation-octagon"></i> ' + (tolak ? 'Alasan penolakan' : 'Perlu diperbaiki') + '</div>' +
+    (p.Catatan_Umum ? '<div class="cat-t">' + esc(p.Catatan_Umum) + '</div>' : '') +
+    ks.map(k => '<div class="cat-i"><b>' + esc(ITEM_TOLAK[k]) + ':</b> ' + esc(it[k]) + '</div>').join('') + '</div>';
+}
+
 function aksiKartu(p) {
   const id = esc(p.ID_Pengajuan);
   if (state.role === 'OPD') {
@@ -790,7 +878,7 @@ function kartu(p) {
       '<div class="p-meta">Penyedia: ' + esc(p.Calon_Penyedia) + '</div>' +
       '<div class="p-meta">' + esc(p.Jenis_Tenaga_Alih_Daya) + '</div>' +
       '<div class="p-meta faint">' + esc(p.ID_Pengajuan) + ', ' + esc(p.Timestamp) + '</div>' +
-      '<div class="dchips">' + dokChips(p) + '</div>' +
+      '<div class="dchips">' + dokChips(p) + '</div>' + etalase(p.Link_Katalog) + catatanBox(p) +
       '<div class="p-acts">' + aksiKartu(p) + '</div>' +
     '</div></article>';
 }
@@ -867,16 +955,16 @@ function miniRuler(base, tambah) {                 // satu ruas = Rp 1 miliar
 function renderPenyedia() {
   const rows = state.penyedia || [];
   $('#penNote').textContent = 'Akumulasi HPS tiap penyedia dari pengajuan yang belum ditolak. Batas Rp 15 miliar berlaku per penyedia' +
-    (state.ringkasan && !state.ringkasan.lintasOpd ? ' di tiap OPD.' : ', dari seluruh OPD.');
+    (state.ringkasan && !state.ringkasan.lintasOpd ? ' di tiap OPD.' : ', dari seluruh OPD.') + ' Klik baris untuk melihat rincian pengaju.';
   if (!rows.length) { $('#tbodyPen').innerHTML = '<tr><td colspan="4"><div class="empty"><i class="bi bi-inbox"></i>Belum ada penyedia.</div></td></tr>'; return; }
-  $('#tbodyPen').innerHTML = rows.map(v => {
+  $('#tbodyPen').innerHTML = rows.map((v, i) => {
     const pct = v.total / LIMIT * 100;
     const st = v.total > LIMIT ? '<span class="pill st-Ditolak"><i></i>Melebihi batas</span>'
              : pct >= 80 ? '<span class="pill st-Pending"><i></i>Mendekati batas</span>'
              : '<span class="pill st-Disetujui"><i></i>Di bawah batas</span>';
-    return '<tr><td><div class="opd">' + esc(v.nama) + '</div><div class="small-note">' + v.jumlah + ' pengajuan dari ' + esc(v.opd.join(', ')) + '</div></td>' +
+    return '<tr class="klik" tabindex="0" role="button" data-pen="' + i + '" aria-label="Lihat rincian ' + esc(v.nama) + '"><td><div class="opd">' + esc(v.nama) + '</div><div class="small-note">' + v.jumlah + ' pengajuan dari ' + esc(v.opd.join(', ')) + '</div></td>' +
       '<td style="min-width:240px">' + miniRuler(v.total, 0) + '<div class="mini-pct">' + pct.toFixed(1).replace('.', ',') + '% dari Rp 15 miliar</div></td>' +
-      '<td class="num">' + rp(v.total) + '</td><td>' + st + '</td></tr>';
+      '<td class="num">' + rp(v.total) + '</td><td>' + st + ' <i class="bi bi-chevron-right"></i></td></tr>';
   }).join('');
 }
 
@@ -893,6 +981,8 @@ document.addEventListener('click', e => {
   if (tab) { state.tab = tab.dataset.tab; renderTab(); if (state.tab === 'penyedia') muatPenyedia(); if (state.tab === 'akun') { renderAkun(); muatAkun(); } return; }
   const chip = e.target.closest('.chip[data-filter]');
   if (chip) { state.filter = chip.dataset.filter; renderChips(); muatData(); return; }
+  const trp = e.target.closest('tr[data-pen]');
+  if (trp) return bukaDetailPen(Number(trp.dataset.pen));
   const b = e.target.closest('button[data-act]'); if (!b) return;
   const id = b.dataset.id, act = b.dataset.act;
   if (act === 'akun') return ubahAkun(b.dataset.user, b.dataset.status, b);
@@ -933,6 +1023,17 @@ document.addEventListener('change', e => {
   if (err) { inp.value = ''; span.textContent = err; span.className = 'fp-name bad'; return; }
   span.textContent = f.name + ' (' + (f.size / 1048576).toFixed(1).replace('.', ',') + ' MB)'; span.className = 'fp-name has';
 });
+
+/* Tandai kotak dokumen yang sudah terisi (berkas atau tautan) */
+function tandaiPick(el) {
+  const f = el.querySelector('input[type=file]').files[0], l = el.querySelector('.fp-link').value.trim();
+  const span = el.querySelector('.fp-name');
+  el.classList.toggle('terisi', !!(f || l));
+  if (!f && l) { span.textContent = 'Memakai tautan Google Drive'; span.className = 'fp-name has'; }
+  else if (!f && !l && !span.classList.contains('bad')) { span.textContent = 'Belum ada berkas'; span.className = 'fp-name'; }
+}
+document.addEventListener('change', e => { const el = e.target.closest('.file-pick'); if (el && e.target.type === 'file') tandaiPick(el); });
+document.addEventListener('input', e => { const el = e.target.closest('.file-pick'); if (el && e.target.classList.contains('fp-link')) tandaiPick(el); });
 
 /** Kumpulkan pilihan dalam sebuah wadah: { jenis: { file } atau { link } }. Berkas didahulukan atas tautan. */
 function sumberDok(wadah) {
@@ -997,6 +1098,10 @@ fHps.addEventListener('input', () => {
  * lalu ditambah nilai HPS yang sedang diketik. Penyedia lain tidak ikut dihitung.
  * Keputusan akhir dihitung ulang di server (Code.gs > cekLimit_).
  */
+let linkTimer = null;
+function tampilPratinjauLink() { const v = $('#fLink').value; $('#linkPrev').innerHTML = urlAman(v) ? etalase(v) : ''; }
+$('#fLink').addEventListener('input', () => { clearTimeout(linkTimer); linkTimer = setTimeout(tampilPratinjauLink, 700); });
+
 let penTimer = null;
 $('#fPenyedia').addEventListener('change', () => {
   clearTimeout(penTimer);
@@ -1032,13 +1137,14 @@ function renderPenyediaInfo() {
   box.innerHTML = miniRuler(p.total, nilai) + '<div class="pen-text">' + awal + '<br>' + akhir + '</div>';
 }
 
-const dataForm = () => ({ nama: $('#fNama').value, penyedia: $('#fPenyedia').value, nilai: getNilai(), jenis: $('#fJenis').value, jumlah: Number($('#fJumlah').value) });
+const dataForm = () => ({ link: $('#fLink').value.trim(), nama: $('#fNama').value, penyedia: $('#fPenyedia').value, nilai: getNilai(), jenis: $('#fJenis').value, jumlah: Number($('#fJumlah').value) });
 
 function resetForm() {
   $('#formPengajuan').reset();
   $('#pickList').innerHTML = Object.keys(JENIS_DOK).map(k => '<div class="col-lg-4">' + pickerHtml(k, 'f') + '</div>').join('');
   state.editingId = null; state.pen = { nama: '', total: 0, jumlah: 0, ada: false };
   $('#panelForm').classList.remove('editing');
+  $('#linkPrev').innerHTML = '';
   $('#formTitle').textContent = 'Formulir pengajuan';
   $('#formSub').textContent = 'Isi data paket dan lampirkan tiga dokumen pendukung.';
   $('#btnKirim').textContent = 'Kirim pengajuan';
@@ -1056,6 +1162,7 @@ function mulaiEdit(id) {
   $('#fNama').value = p.Nama_Paket; setPilihan($('#fPenyedia'), p.Calon_Penyedia);
   fHps.value = Number(p.Nilai_HPS).toLocaleString('id-ID');
   setPilihan($('#fJenis'), p.Jenis_Tenaga_Alih_Daya); $('#fJumlah').value = p.Jumlah_Tenaga;
+  $('#fLink').value = p.Link_Katalog || ''; tampilPratinjauLink();
   $('#panelForm').classList.add('editing');
   $('#formTitle').textContent = 'Perbaiki pengajuan';
   $('#formSub').textContent = id + '. Dokumen diganti lewat tombol "Ganti dokumen". Setelah dikirim ulang, status kembali Pending.';
@@ -1074,6 +1181,7 @@ async function kirimForm(konfirmasi) {
     const kurang = Object.keys(JENIS_DOK).filter(k => !sumber[k]);
     if (kurang.length) { toast('Lengkapi dokumen (berkas atau tautan): ' + kurang.map(k => JENIS_DOK[k]).join(', ') + '.', 'warning'); return; }
   }
+  if (!urlAman($('#fLink').value)) { toast('Tempel link etalase penyedia dari katalog (diawali https://).', 'warning'); $('#fLink').focus(); return; }
   const btn = $('#btnKirim'); busy(btn, true, 'Mengirim');
   try {
     const d = dataForm();
@@ -1108,6 +1216,54 @@ function tampilLimit(r) {
 }
 $('#btnTetapAjukan').addEventListener('click', () => { bootstrap.Modal.getOrCreateInstance($('#modalLimit')).hide(); kirimForm(true); });
 
+
+/* =====================================================================
+ *  DETAIL PENYEDIA (Tim Konsolidasi): klik baris di "Akumulasi per penyedia"
+ * ===================================================================== */
+async function bukaDetailPen(i) {
+  const v = (state.penyedia || [])[i]; if (!v) return;
+  const id = ++state.detId;
+  $('#dpJudul').textContent = v.nama;
+  $('#dpBody').innerHTML = '<div class="empty"><i class="bi bi-hourglass-split"></i>Memuat rincian...</div>';
+  bootstrap.Modal.getOrCreateInstance($('#modalPen')).show();
+  try {
+    const opd = state.ringkasan && state.ringkasan.lintasOpd === false ? (v.opd[0] || '') : '';
+    const r = await call('getDetailPenyedia', v.nama, opd);
+    if (id !== state.detId) return;
+    $('#dpBody').innerHTML = r.ok ? htmlDetailPen(r) : '<div class="empty">' + esc(r.message) + '</div>';
+  } catch (e) { if (id === state.detId) $('#dpBody').innerHTML = '<div class="empty">Gagal memuat rincian.</div>'; gagal(e); }
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const tr = e.target.closest && e.target.closest('tr[data-pen]');
+  if (tr) { e.preventDefault(); bukaDetailPen(Number(tr.dataset.pen)); }
+});
+
+function htmlDetailPen(r) {
+  const pct = r.total / LIMIT * 100, sisa = LIMIT - r.total;
+  const perOpd = {};
+  r.list.forEach(p => { if (!p.dihitung) return; const o = perOpd[p.OPD_Pengaju] || (perOpd[p.OPD_Pengaju] = { n: 0, t: 0 }); o.n++; o.t += p.Nilai_HPS; });
+  const opdRows = Object.keys(perOpd).sort((a, b) => perOpd[b].t - perOpd[a].t).map(o =>
+    '<div class="dp-opd-row"><span>' + esc(o) + ' <span class="small-note">(' + perOpd[o].n + ' pengajuan)</span></span><b>' + rp(perOpd[o].t) + '</b></div>').join('');
+  const ringkas = '<div class="dp-sum">' +
+    '<div><div class="k">Total HPS (belum ditolak)</div><div class="v">' + rp(r.total) + '</div></div>' +
+    '<div><div class="k">Pengajuan dihitung</div><div class="v">' + r.jumlah + '</div></div>' +
+    '<div><div class="k">' + (sisa >= 0 ? 'Sisa dari batas Rp 15 miliar' : 'Melebihi batas Rp 15 miliar') + '</div><div class="v"' + (sisa < 0 ? ' style="color:var(--red)"' : '') + '>' + rp(Math.abs(sisa)) + '</div></div></div>' +
+    miniRuler(r.total, 0) + '<div class="mini-pct mb-3">' + pct.toFixed(1).replace('.', ',') + '% dari batas</div>';
+  const items = r.list.map(p => {
+    const kode = singkatan(p.OPD_Pengaju);
+    const link = urlAman(p.Link_Katalog) ? '<a class="btn btn-sm btn-line mt-2" href="' + esc(p.Link_Katalog) + '" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i> Buka etalase katalog</a>' : '';
+    return '<div class="dp-item' + (p.dihitung ? '' : ' mati') + '"><div class="dp-top"><div class="dp-opd">' + esc(p.OPD_Pengaju) + (kode ? ' <small>(' + esc(kode) + ')</small>' : '') + '</div>' + pill(p.Status) + '</div>' +
+      '<div class="dp-nama">' + esc(p.Nama_Paket) + '</div>' +
+      '<div class="dp-grid"><div>Nilai HPS: <b>' + rp(p.Nilai_HPS) + '</b></div><div>Jenis tenaga: <b>' + esc(p.Jenis_Tenaga_Alih_Daya) + '</b></div>' +
+      '<div>Jumlah tenaga: <b>' + p.Jumlah_Tenaga + ' orang</b></div><div>Diajukan: <b>' + esc(p.Timestamp) + '</b></div>' +
+      '<div>ID: <b>' + esc(p.ID_Pengajuan) + '</b></div><div>Dokumen: <b>' + (p.DokLengkap ? 'Lengkap' : 'Belum lengkap') + '</b></div></div>' +
+      (p.dihitung ? '' : '<div class="small-note mt-1">Ditolak, tidak dihitung dalam akumulasi.</div>') + link + '</div>';
+  }).join('');
+  return ringkas + '<div class="fp-label mb-1">Per OPD pengaju</div>' + (opdRows || '<div class="small-note">Belum ada pengajuan yang dihitung.</div>') +
+    '<div class="fp-label mt-3">Daftar pengajuan (' + r.list.length + ')</div>' + items;
+}
+
 /* =====================================================================
  *  MODAL DOKUMEN (lengkapi atau ganti dokumen pengajuan yang sudah ada)
  * ===================================================================== */
@@ -1135,10 +1291,23 @@ $('#btnDokUnggah').addEventListener('click', async () => {
  *  TINDAKAN TIM KONSOLIDASI: SETUJUI, TOLAK, MINTA REVISI
  * ===================================================================== */
 const AKSI = {
-  Disetujui: { judul: 'Setujui pengajuan', tombol: 'Setujui', kelas: 'btn-ok', wajib: false, label: 'Catatan (boleh dikosongkan)', hint: 'Catatan tampil di riwayat klarifikasi OPD.' },
-  Ditolak:   { judul: 'Tolak pengajuan', tombol: 'Tolak pengajuan', kelas: 'btn-no', wajib: false, label: 'Alasan penolakan (boleh dikosongkan)', hint: 'Pengajuan yang ditolak tidak lagi dihitung dalam akumulasi penyedia.' },
-  Revisi:    { judul: 'Minta revisi atau klarifikasi', tombol: 'Kirim permintaan', kelas: 'btn-warn', wajib: true, label: 'Yang perlu diperbaiki atau dijelaskan', hint: 'Wajib diisi. OPD bisa membalas lewat Klarifikasi dan memperbaiki pengajuannya.' }
+  Disetujui: { judul: 'Setujui pengajuan', tombol: 'Setujui', kelas: 'btn-ok', item: false, label: 'Catatan (boleh dikosongkan)', hint: 'Catatan tampil di riwayat klarifikasi OPD.' },
+  Ditolak:   { judul: 'Tolak pengajuan', tombol: 'Tolak pengajuan', kelas: 'btn-no', item: true, label: 'Alasan penolakan umum', hint: 'Isi alasan umum, atau centang item di atas dan beri alasan masing-masing. Alasan terlihat oleh OPD. Pengajuan yang ditolak tidak dihitung dalam akumulasi penyedia.' },
+  Revisi:    { judul: 'Minta revisi atau klarifikasi', tombol: 'Kirim permintaan', kelas: 'btn-warn', item: true, label: 'Catatan umum', hint: 'Isi catatan umum, atau centang item yang perlu diperbaiki beserta alasannya. OPD bisa membalas lewat Klarifikasi dan memperbaiki pengajuannya.' }
 };
+
+function renderItemAksi(tampil) {
+  const box = $('#aksiItems');
+  if (!tampil) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = '<div class="fp-label mb-1">Per item (opsional): centang item yang ditolak atau perlu diperbaiki</div>' + Object.keys(ITEM_TOLAK).map(k =>
+    '<div class="item-row"><div class="form-check"><input class="form-check-input" type="checkbox" id="it-' + k + '" data-item="' + k + '"><label class="form-check-label" for="it-' + k + '">' + esc(ITEM_TOLAK[k]) + '</label></div>' +
+    '<textarea class="form-control item-alasan" id="ia-' + k + '" rows="2" maxlength="500" style="display:none" placeholder="Alasan untuk ' + esc(ITEM_TOLAK[k]) + '" aria-label="Alasan ' + esc(ITEM_TOLAK[k]) + '"></textarea></div>').join('');
+}
+document.addEventListener('change', e => {
+  const c = e.target.closest('input[data-item]'); if (!c) return;
+  const t = $('#ia-' + c.dataset.item); t.style.display = c.checked ? '' : 'none'; if (c.checked) t.focus();
+});
 
 function bukaAksi(id, status) {
   const p = state.list.find(x => x.ID_Pengajuan === id); if (!p) return;
@@ -1149,6 +1318,7 @@ function bukaAksi(id, status) {
   $('#aksiInfo').innerHTML = '<div class="fw-bold">' + esc(p.Nama_Paket) + '</div><div class="small-note">' + esc(p.OPD_Pengaju) + ', ' + rp(p.Nilai_HPS) + '</div>';
   $('#aksiLabel').textContent = a.label; $('#aksiHint').textContent = a.hint;
   $('#aksiCatatan').value = '';
+  renderItemAksi(a.item);
   const ok = $('#btnAksiOk'); ok.className = 'btn ' + a.kelas; ok.textContent = a.tombol;
   bootstrap.Modal.getOrCreateInstance($('#modalAksi')).show();
 }
@@ -1156,10 +1326,16 @@ function bukaAksi(id, status) {
 $('#btnAksiOk').addEventListener('click', async () => {
   const k = state.konfirmasiAksi; if (!k) return;
   const catatan = $('#aksiCatatan').value.trim();
-  if (AKSI[k.status].wajib && !catatan) { toast('Catatan wajib diisi.', 'warning'); $('#aksiCatatan').focus(); return; }
+  const items = {}; let kosong = null;
+  document.querySelectorAll('#aksiItems input[data-item]:checked').forEach(c => {
+    const v = $('#ia-' + c.dataset.item).value.trim();
+    if (v) items[c.dataset.item] = v; else if (!kosong) kosong = c.dataset.item;
+  });
+  if (kosong) { toast('Isi alasan untuk: ' + ITEM_TOLAK[kosong] + '.', 'warning'); $('#ia-' + kosong).focus(); return; }
+  if (k.status === 'Revisi' && !catatan && !Object.keys(items).length) { toast('Isi catatan umum, atau pilih item yang perlu diperbaiki beserta alasannya.', 'warning'); $('#aksiCatatan').focus(); return; }
   const btn = $('#btnAksiOk'); busy(btn, true, 'Menyimpan');
   try {
-    const res = await call('ubahStatus', k.id, k.status, catatan);
+    const res = await call('ubahStatus', k.id, k.status, catatan, items);
     if (!res.ok) { toast(res.message, 'danger'); return; }
     bootstrap.Modal.getOrCreateInstance($('#modalAksi')).hide();
     toast(res.message, 'success');
