@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id" data-bs-theme="dark">
 <head>
   <meta charset="utf-8">
@@ -538,7 +538,7 @@ const RAW_SUPABASE_URL = "https://cccwpgjpzwaioopilxno.supabase.co/rest/v1/";
 const SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SUPABASE_ANON_KEY = "sb_publishable_mqR0IRjdCxTWsSSK0h63Dw_j5n7yKrr";
 
-const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+const sbClient = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const LIMIT = 15000000000;
 const UKURAN_HALAMAN = 24;
@@ -597,20 +597,20 @@ const gagal = e => { if (!e) return; toast(e.message || 'Terjadi kesalahan.', 'd
  *  ADAPTER SUPABASE: Menggantikan fungsi backend GAS (Code.gs)
  * ===================================================================== */
 const api = async (fn, ...args) => {
-  if (!supabase) throw new Error('Supabase Client belum dikonfigurasi. Periksa SUPABASE_URL & KEY.');
+  if (!sbClient) throw new Error('Supabase Client belum dikonfigurasi. Periksa SUPABASE_URL & KEY.');
 
   switch (fn) {
     case 'login': {
       const [u, p] = args;
-      const { data, error } = await supabase.rpc('login_user', { p_username: u, p_password: p });
+      const { data, error } = await sbClient.rpc('login_user', { p_username: u, p_password: p });
       if (error) throw error;
       return data;
     }
     case 'getReferensi': {
       const [rS, rJ, rP] = await Promise.all([
-        supabase.from('referensi_satker').select('nama').order('nama'),
-        supabase.from('referensi_jenis_tenaga').select('nama').order('nama'),
-        supabase.from('referensi_penyedia').select('nama').order('nama')
+        sbClient.from('referensi_satker').select('nama').order('nama'),
+        sbClient.from('referensi_jenis_tenaga').select('nama').order('nama'),
+        sbClient.from('referensi_penyedia').select('nama').order('nama')
       ]);
       return {
         satker: (rS.data || []).map(x => x.nama),
@@ -621,11 +621,11 @@ const api = async (fn, ...args) => {
     case 'daftarAkun': {
       const [satker, username, password] = args;
       // Gunakan RPC login / pgcrypto digest di server
-      const { data: exist } = await supabase.from('app_users').select('username').ilike('username', username).single();
+      const { data: exist } = await sbClient.from('app_users').select('username').ilike('username', username).single();
       if (exist) return { ok: false, message: 'Username sudah dipakai.' };
 
       // Buat akun baru via RPC/table
-      const { error } = await supabase.from('app_users').insert([{
+      const { error } = await sbClient.from('app_users').insert([{
         username: username,
         password_hash: password, // jika menggunakan plain / disederhanakan
         role: 'OPD',
@@ -636,19 +636,19 @@ const api = async (fn, ...args) => {
       return { ok: true, message: 'Pendaftaran berhasil untuk ' + satker + '. Akun akan aktif setelah disetujui Tim Konsolidasi.' };
     }
     case 'getAkun': {
-      const { data, error } = await supabase.from('app_users').select('username, satker, status').eq('role', 'OPD');
+      const { data, error } = await sbClient.from('app_users').select('username, satker, status').eq('role', 'OPD');
       if (error) throw error;
       return { akun: data || [] };
     }
     case 'ubahStatusAkun': {
       const [username, statusBaru] = args;
-      const { error } = await supabase.from('app_users').update({ status: statusBaru }).eq('username', username);
+      const { error } = await sbClient.from('app_users').update({ status: statusBaru }).eq('username', username);
       if (error) throw error;
       return { ok: true, message: 'Status akun ' + username + ' diubah menjadi ' + statusBaru + '.' };
     }
     case 'cekPenyedia': {
       const [nama, excludeId] = args;
-      const { data, error } = await supabase.rpc('hitung_total_penyedia', { p_penyedia: nama, p_exclude_id: excludeId || null });
+      const { data, error } = await sbClient.rpc('hitung_total_penyedia', { p_penyedia: nama, p_exclude_id: excludeId || null });
       if (error) throw error;
       const r = (data && data[0]) ? data[0] : { total: 0, jumlah: 0 };
       return { ok: true, total: Number(r.total), jumlah: Number(r.jumlah), limit: LIMIT };
@@ -656,7 +656,7 @@ const api = async (fn, ...args) => {
     case 'getPengajuan': {
       const [opsi] = args;
       const hal = opsi.halaman || 1, uk = opsi.ukuran || UKURAN_HALAMAN;
-      let q = supabase.from('pengajuan').select('*', { count: 'exact' });
+      let q = sbClient.from('pengajuan').select('*', { count: 'exact' });
       if (state.role === 'OPD') q = q.eq('opd_pengaju', state.satker);
       if (opsi.status) q = q.eq('status', opsi.status);
       if (opsi.cari) q = q.or(`nama_paket.ilike.%${opsi.cari}%,calon_penyedia.ilike.%${opsi.cari}%,opd_pengaju.ilike.%${opsi.cari}%,id.ilike.%${opsi.cari}%`);
@@ -666,7 +666,7 @@ const api = async (fn, ...args) => {
       if (error) throw error;
 
       // Ringkasan
-      let qR = supabase.from('pengajuan').select('status, nilai_hps');
+      let qR = sbClient.from('pengajuan').select('status, nilai_hps');
       if (state.role === 'OPD') qR = qR.eq('opd_pengaju', state.satker);
       const { data: allR } = await qR;
       const j = { Pending: 0, Revisi: 0, Disetujui: 0, Ditolak: 0 };
@@ -705,7 +705,7 @@ const api = async (fn, ...args) => {
       return { list, total: count || 0, halaman: hal, ukuran: uk, ringkasan: { total: tot, limit: LIMIT, jumlah: j } };
     }
     case 'getPenyedia': {
-      const { data, error } = await supabase.from('pengajuan').select('calon_penyedia, nilai_hps, opd_pengaju, status');
+      const { data, error } = await sbClient.from('pengajuan').select('calon_penyedia, nilai_hps, opd_pengaju, status');
       if (error) throw error;
       const peta = {};
       (data || []).forEach(r => {
@@ -723,7 +723,7 @@ const api = async (fn, ...args) => {
     }
     case 'getDetailPenyedia': {
       const [nama] = args;
-      const { data, error } = await supabase.from('pengajuan').select('*').eq('calon_penyedia', nama).order('created_at', { ascending: false });
+      const { data, error } = await sbClient.from('pengajuan').select('*').eq('calon_penyedia', nama).order('created_at', { ascending: false });
       if (error) throw error;
       let total = 0, jumlah = 0;
       const list = (data || []).map(p => {
@@ -748,7 +748,7 @@ const api = async (fn, ...args) => {
     }
     case 'submitPengajuan': {
       const [d, konfirmasiLimit] = args;
-      const { data: totalData } = await supabase.rpc('hitung_total_penyedia', { p_penyedia: d.penyedia });
+      const { data: totalData } = await sbClient.rpc('hitung_total_penyedia', { p_penyedia: d.penyedia });
       const totalLama = (totalData && totalData[0]) ? Number(totalData[0].total) : 0;
       const setelah = totalLama + Number(d.nilai);
 
@@ -760,10 +760,10 @@ const api = async (fn, ...args) => {
         };
       }
 
-      const { data: idData } = await supabase.rpc('buat_id_pengajuan');
+      const { data: idData } = await sbClient.rpc('buat_id_pengajuan');
       const newId = idData || ('PGJ-' + Date.now());
 
-      const { error } = await supabase.from('pengajuan').insert([{
+      const { error } = await sbClient.from('pengajuan').insert([{
         id: newId,
         opd_pengaju: state.satker,
         nama_paket: d.nama,
@@ -779,7 +779,7 @@ const api = async (fn, ...args) => {
     }
     case 'revisiPengajuan': {
       const [id, d, konfirmasiLimit] = args;
-      const { data: totalData } = await supabase.rpc('hitung_total_penyedia', { p_penyedia: d.penyedia, p_exclude_id: id });
+      const { data: totalData } = await sbClient.rpc('hitung_total_penyedia', { p_penyedia: d.penyedia, p_exclude_id: id });
       const totalLama = (totalData && totalData[0]) ? Number(totalData[0].total) : 0;
       const setelah = totalLama + Number(d.nilai);
 
@@ -791,7 +791,7 @@ const api = async (fn, ...args) => {
         };
       }
 
-      const { error } = await supabase.from('pengajuan').update({
+      const { error } = await sbClient.from('pengajuan').update({
         nama_paket: d.nama,
         calon_penyedia: d.penyedia,
         nilai_hps: d.nilai,
@@ -807,7 +807,7 @@ const api = async (fn, ...args) => {
     }
     case 'ubahStatus': {
       const [id, statusBaru, catatan, items] = args;
-      const { error } = await supabase.from('pengajuan').update({
+      const { error } = await sbClient.from('pengajuan').update({
         status: statusBaru,
         catatan_umum: statusBaru === 'Disetujui' ? '' : catatan,
         catatan_item: items || {}
@@ -817,7 +817,7 @@ const api = async (fn, ...args) => {
       let pesan = '[Status: ' + statusBaru + ']' + (catatan ? ' ' + catatan : '');
       Object.keys(ITEM_TOLAK).forEach(k => { if (items[k]) pesan += '\n- ' + ITEM_TOLAK[k] + ': ' + items[k]; });
 
-      await supabase.from('klarifikasi').insert([{
+      await sbClient.from('klarifikasi').insert([{
         id_pengajuan: id,
         pengirim: state.username,
         role: state.role,
@@ -827,7 +827,7 @@ const api = async (fn, ...args) => {
     }
     case 'getKlarifikasi': {
       const [id] = args;
-      const { data, error } = await supabase.from('klarifikasi').select('*').eq('id_pengajuan', id).order('created_at', { ascending: true });
+      const { data, error } = await sbClient.from('klarifikasi').select('*').eq('id_pengajuan', id).order('created_at', { ascending: true });
       if (error) throw error;
       const pesan = (data || []).map(m => ({
         waktu: new Date(m.created_at).toLocaleString('id-ID'),
@@ -840,7 +840,7 @@ const api = async (fn, ...args) => {
     }
     case 'kirimKlarifikasi': {
       const [id, teks] = args;
-      const { error } = await supabase.from('klarifikasi').insert([{
+      const { error } = await sbClient.from('klarifikasi').insert([{
         id_pengajuan: id,
         pengirim: state.username,
         role: state.role,
@@ -854,14 +854,14 @@ const api = async (fn, ...args) => {
       const cleanName = namaFile.replace(/[\\\/:*?"<>|]/g, '_');
       const storagePath = `${id}/${jenis}_${cleanName}`;
 
-      const { error: upErr } = await supabase.storage.from('dokumen-pengajuan').upload(storagePath, file, { upsert: true });
+      const { error: upErr } = await sbClient.storage.from('dokumen-pengajuan').upload(storagePath, file, { upsert: true });
       if (upErr) throw upErr;
 
       const colName = 'dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis);
       const updateData = {};
       updateData[colName] = `${storagePath}|${cleanName}`;
 
-      const { error: dbErr } = await supabase.from('pengajuan').update(updateData).eq('id', id);
+      const { error: dbErr } = await sbClient.from('pengajuan').update(updateData).eq('id', id);
       if (dbErr) throw dbErr;
       return { ok: true, nama: cleanName };
     }
@@ -870,13 +870,13 @@ const api = async (fn, ...args) => {
       const colName = 'dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis);
       const updateData = {};
       updateData[colName] = `link:${tautan}|Tautan Google Drive`;
-      const { error } = await supabase.from('pengajuan').update(updateData).eq('id', id);
+      const { error } = await sbClient.from('pengajuan').update(updateData).eq('id', id);
       if (error) throw error;
       return { ok: true, nama: 'Tautan Google Drive' };
     }
     case 'unduhDokumen': {
       const [id, jenis] = args;
-      const { data, error } = await supabase.from('pengajuan').select('*').eq('id', id).single();
+      const { data, error } = await sbClient.from('pengajuan').select('*').eq('id', id).single();
       if (error || !data) return { ok: false, message: 'Pengajuan tidak ditemukan.' };
       const raw = data['dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis)];
       if (!raw) return { ok: false, message: 'Dokumen belum ada.' };
@@ -888,7 +888,7 @@ const api = async (fn, ...args) => {
         return { ok: true };
       }
 
-      const { data: urlData } = supabase.storage.from('dokumen-pengajuan').getPublicUrl(pathOrLink);
+      const { data: urlData } = sbClient.storage.from('dokumen-pengajuan').getPublicUrl(pathOrLink);
       window.open(urlData.publicUrl, '_blank');
       return { ok: true };
     }
@@ -1474,7 +1474,7 @@ function bukaKlarifikasi(id) {
 
   // Supabase Realtime Subscription untuk Chat Instan
   if (state.klarSub) state.klarSub.unsubscribe();
-  state.klarSub = supabase
+  state.klarSub = sbClient
     .channel('klarifikasi_' + id)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'klarifikasi', filter: 'id_pengajuan=eq.' + id }, payload => {
       muatKlarifikasi();
@@ -1534,3 +1534,4 @@ $('#chatInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.s
 </script>
 </body>
 </html>
+
