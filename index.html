@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id" data-bs-theme="dark">
 <head>
   <meta charset="utf-8">
@@ -621,7 +621,7 @@ const api = async (fn, ...args) => {
     case 'daftarAkun': {
       const [satker, username, password] = args;
       // Gunakan RPC login / pgcrypto digest di server
-      const { data: exist } = await sbClient.from('app_users').select('username').ilike('username', username).single();
+      const { data: exist } = await sbClient.from('app_users').select('username').ilike('username', username).maybeSingle();
       if (exist) return { ok: false, message: 'Username sudah dipakai.' };
 
       // Buat akun baru via RPC/table
@@ -876,7 +876,7 @@ const api = async (fn, ...args) => {
     }
     case 'unduhDokumen': {
       const [id, jenis] = args;
-      const { data, error } = await sbClient.from('pengajuan').select('*').eq('id', id).single();
+      const { data, error } = await sbClient.from('pengajuan').select('*').eq('id', id).maybeSingle();
       if (error || !data) return { ok: false, message: 'Pengajuan tidak ditemukan.' };
       const raw = data['dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis)];
       if (!raw) return { ok: false, message: 'Dokumen belum ada.' };
