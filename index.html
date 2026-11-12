@@ -133,11 +133,11 @@
     .fpc-link .fp-link::placeholder { color: var(--ph); }
     .form-section-title { font-weight: 700; font-size: .92rem; color: var(--text); }
 
-    /* ---------- Masuk ---------- */
+    /* ---------- Masuk & Lupa Password ---------- */
     #loginView { min-height: 100vh; display: none; place-items: center; padding: 1.5rem;
       background-color: transparent;
       background-image: radial-gradient(ellipse at 50% 0%, rgba(245,158,11,.10), transparent 55%); }
-    .login-wrap { width: 100%; max-width: 400px; }
+    .login-wrap { width: 100%; max-width: 420px; }
     .logo { display: flex; align-items: center; gap: .65rem; font-weight: 800; font-size: 1.35rem; letter-spacing: -.02em; }
     .logo i { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-size: 1.15rem; box-shadow: 0 4px 12px rgba(245,158,11,.25); }
     .logo span em { color: var(--accent-text); font-style: normal; }
@@ -191,6 +191,27 @@
     .tab.on { color: var(--text); border-bottom-color: var(--accent); }
     .tab b { margin-left: .4rem; color: var(--faint); }
 
+    /* ---------- Accordion / Group OPD Modern ---------- */
+    .opd-group-card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+      margin-bottom: 1rem; overflow: hidden; transition: all .2s ease;
+    }
+    .opd-group-card:hover { border-color: var(--line2); }
+    .opd-header {
+      padding: 1.1rem 1.3rem; display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; cursor: pointer; user-select: none; background: var(--card);
+      transition: background-color .15s ease;
+    }
+    .opd-header:hover { background: var(--hover); }
+    .opd-title-wrap { display: flex; align-items: center; gap: .85rem; }
+    .opd-badge-avatar {
+      width: 42px; height: 42px; border-radius: 10px; background: rgba(56,189,248,.12);
+      color: var(--blue); display: grid; place-items: center; font-weight: 800; font-size: 1.1rem;
+    }
+    .opd-name { font-weight: 800; font-size: 1.05rem; margin-bottom: .2rem; color: var(--text); }
+    .opd-stats-sub { font-size: .8rem; color: var(--muted); }
+    .opd-content { padding: 1.2rem; background: var(--bg2); border-top: 1px solid var(--line); }
+
     /* ---------- Kartu Pengajuan Modern ---------- */
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1.25rem; }
     .pcard { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
@@ -214,10 +235,20 @@
     .add-card:hover { border-color: var(--accent); color: var(--text); background: rgba(245,158,11,.06); }
     .add-card:hover i { transform: scale(1.1); }
 
+    /* Alert Undangan Klarifikasi di Card */
+    .undangan-banner {
+      background: rgba(245,158,11,.12); border: 1px dashed var(--accent); border-radius: 8px;
+      padding: .6rem .75rem; font-size: .78rem; margin: .6rem 0; color: var(--text);
+    }
+    .undangan-banner b { color: var(--accent-text); }
+
     .pill { display: inline-flex; align-items: center; padding: .22rem .7rem .22rem .55rem; border-radius: 999px; font-size: .75rem; font-weight: 700; letter-spacing: .01em; }
     .pill i { width: 7px; height: 7px; border-radius: 50%; margin-right: .45rem; background: currentColor; }
-    .st-Pending   { background: rgba(245,158,11,.15); color: var(--accent-text); border: 1px solid rgba(245,158,11,.3); }
-    .st-Revisi    { background: rgba(56,189,248,.15); color: var(--blue); border: 1px solid rgba(56,189,248,.3); }
+    .st-Pending, .st-Menunggu-Tahap-1 { background: rgba(245,158,11,.15); color: var(--accent-text); border: 1px solid rgba(245,158,11,.3); }
+    .st-Menunggu-Tahap-2 { background: rgba(56,189,248,.15); color: var(--blue); border: 1px solid rgba(56,189,248,.3); }
+    .st-Undangan-Klarifikasi { background: rgba(234,179,8,.2); color: #facc15; border: 1px solid #eab308; }
+    .st-Penyedia-Ditolak { background: rgba(248,113,113,.15); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
+    .st-Revisi, .st-Revisi-Dokumen { background: rgba(56,189,248,.15); color: var(--blue); border: 1px solid rgba(56,189,248,.3); }
     .st-Disetujui { background: rgba(52,211,153,.15); color: var(--green); border: 1px solid rgba(52,211,153,.3); }
     .st-Ditolak   { background: rgba(248,113,113,.15); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
     .poster .pill { background: rgba(12,14,19,.8); backdrop-filter: blur(4px); }
@@ -315,46 +346,85 @@
 </head>
 <body>
 
-<!-- =============================== MASUK =============================== -->
+<!-- =============================== MASUK & LUPA PASSWORD =============================== -->
 <div id="loginView">
   <button type="button" class="btn btn-line btn-tema tema-login" aria-label="Ganti tema"><i class="bi bi-sun-fill ic-sun"></i><i class="bi bi-moon-stars-fill ic-moon"></i></button>
   <div class="login-wrap">
     <div class="logo"><i class="bi bi-collection-play-fill"></i><span>Pengajuan <em>Alih Daya</em></span></div>
+    
+    <!-- Form Masuk -->
     <form class="login-card" id="loginForm" autocomplete="off">
       <h1 class="h4 fw-bold mb-1">Masuk</h1>
-      <p class="small-note mb-4">Gunakan akun OPD atau akun Tim Konsolidasi.</p>
+      <p class="small-note mb-4">Gunakan akun OPD, Pokja, atau Admin.</p>
       <div id="loginMsg" class="alert alert-danger py-2 small" style="display:none"></div>
       <div class="fld">
-        <label for="inUser">Username</label>
-        <input class="form-control" id="inUser" required autofocus>
+        <label for="inUser">Username atau Email</label>
+        <input class="form-control" id="inUser" required autofocus placeholder="Masukkan username / email">
       </div>
-      <div class="fld mb-4">
+      <div class="fld mb-2">
         <label for="inPass">Password</label>
-        <input class="form-control" id="inPass" type="password" required>
+        <input class="form-control" id="inPass" type="password" required placeholder="Masukkan password">
+      </div>
+      <div class="text-end mb-4">
+        <button type="button" class="link-btn small" id="btnKeLupa">Lupa password?</button>
       </div>
       <button class="btn btn-main w-100 py-2" id="btnLogin" type="submit">Masuk</button>
-      <div class="ganti-form">Belum punya akun? <button type="button" class="link-btn" id="btnKeDaftar">Daftar akun</button></div>
+      <div class="ganti-form">Belum punya akun? <button type="button" class="link-btn" id="btnKeDaftar">Daftar akun OPD</button></div>
     </form>
 
+    <!-- Form Daftar Akun Baru -->
     <form class="login-card" id="regForm" autocomplete="off" style="display:none">
-      <h1 class="h4 fw-bold mb-1">Daftar akun</h1>
-      <p class="small-note mb-4">Pilih nama satker Anda. Akun baru aktif setelah disetujui Tim Konsolidasi.</p>
+      <h1 class="h4 fw-bold mb-1">Daftar akun OPD</h1>
+      <p class="small-note mb-4">Pilih nama satker Anda. Masukkan email untuk verifikasi & reset password.</p>
       <div id="regMsg" class="alert alert-danger py-2 small" style="display:none"></div>
       <div class="fld">
         <label for="regSatker">Nama satker</label>
-        <input class="form-control" id="regSatker" list="listSatker" placeholder="Ketik untuk mencari, lalu pilih dari daftar" required>
+        <input class="form-control" id="regSatker" list="listSatker" placeholder="Ketik untuk mencari nama satker..." required>
         <datalist id="listSatker"></datalist>
       </div>
       <div class="fld">
+        <label for="regEmail">Email Aktif (untuk reset password)</label>
+        <input class="form-control" id="regEmail" type="email" placeholder="nama@instansi.go.id" required>
+      </div>
+      <div class="fld">
         <label for="regUser">Username</label>
-        <input class="form-control" id="regUser" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._\-]{3,30}">
+        <input class="form-control" id="regUser" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._\-]{3,30}" placeholder="username_opd">
       </div>
       <div class="fld mb-4">
         <label for="regPass">Password</label>
-        <input class="form-control" id="regPass" type="password" required minlength="6" maxlength="100" autocomplete="new-password">
+        <input class="form-control" id="regPass" type="password" required minlength="6" maxlength="100" autocomplete="new-password" placeholder="Minimal 6 karakter">
       </div>
-      <button class="btn btn-main w-100 py-2" id="btnDaftar" type="submit">Daftar</button>
+      <button class="btn btn-main w-100 py-2" id="btnDaftar" type="submit">Daftar Akun</button>
       <div class="ganti-form">Sudah punya akun? <button type="button" class="link-btn" id="btnKeMasuk">Masuk</button></div>
+    </form>
+
+    <!-- Form Lupa Password -->
+    <form class="login-card" id="lupaForm" autocomplete="off" style="display:none">
+      <h1 class="h4 fw-bold mb-1">Lupa Password</h1>
+      <p class="small-note mb-4">Masukkan email terdaftar untuk menerima kode verifikasi reset password.</p>
+      <div id="lupaMsg" class="alert alert-danger py-2 small" style="display:none"></div>
+      
+      <div id="lupaStep1">
+        <div class="fld mb-4">
+          <label for="lupaEmail">Email Terdaftar</label>
+          <input class="form-control" id="lupaEmail" type="email" required placeholder="nama@instansi.go.id">
+        </div>
+        <button class="btn btn-main w-100 py-2" id="btnKirimOtp" type="button">Kirim Kode Verifikasi</button>
+      </div>
+
+      <div id="lupaStep2" style="display:none">
+        <div class="fld">
+          <label for="lupaToken">Kode Verifikasi (6 Digit)</label>
+          <input class="form-control text-center fw-bold fs-5 letter-spacing-1" id="lupaToken" maxlength="6" placeholder="000000">
+        </div>
+        <div class="fld">
+          <label for="lupaPassBaru">Password Baru</label>
+          <input class="form-control" id="lupaPassBaru" type="password" minlength="6" placeholder="Minimal 6 karakter">
+        </div>
+        <button class="btn btn-main w-100 py-2 mb-2" id="btnSimpanPassBaru" type="button">Simpan Password Baru</button>
+      </div>
+
+      <div class="ganti-form mt-4">Ingat password Anda? <button type="button" class="link-btn" id="btnLupaKeMasuk">Kembali ke Masuk</button></div>
     </form>
   </div>
 </div>
@@ -366,7 +436,10 @@
       <div class="logo"><i class="bi bi-collection-play-fill"></i><span>Pengajuan <em>Alih Daya</em></span></div>
       <div class="userbox">
         <button type="button" class="btn btn-line btn-tema" aria-label="Ganti tema"><i class="bi bi-sun-fill ic-sun"></i><i class="bi bi-moon-stars-fill ic-moon"></i></button>
-        <div><div class="nm" id="whoName"></div><div class="rl" id="whoRole"></div></div>
+        <div>
+          <div class="nm" id="whoName"></div>
+          <div class="rl"><span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1" id="whoBadgeRole"></span><span id="whoRole"></span></div>
+        </div>
         <button class="btn btn-sm btn-line" id="btnLogout" type="button"><i class="bi bi-box-arrow-right"></i> Keluar</button>
       </div>
     </div>
@@ -386,6 +459,7 @@
   </section>
 
   <main class="container-xl">
+    <!-- Formulir Pengajuan (OPD) -->
     <section class="pform" id="panelForm" style="display:none">
       <div class="pform-head">
         <div><h2 class="sec-title" id="formTitle">Formulir pengajuan</h2><p class="small-note mb-0" id="formSub"></p></div>
@@ -394,18 +468,36 @@
       <form id="formPengajuan" autocomplete="off">
         <div class="row g-4">
           <div class="col-lg-6">
-            <div class="fld"><label for="fNama">Nama paket</label><input class="form-control" id="fNama" required maxlength="200" placeholder="Misal: Jasa Kebersihan Gedung Kantor"></div>
-            <div class="fld"><label for="fPenyedia">Calon penyedia</label><select class="form-select" id="fPenyedia" required><option value="">Pilih calon penyedia...</option></select></div>
-            <div class="fld"><label for="fLink">Link katalog penyedia</label><input class="form-control" id="fLink" type="url" required maxlength="500" placeholder="https://e-katalog.lkpp.go.id/..."><div class="link-prev" id="linkPrev"></div></div>
+            <div class="fld">
+              <label for="fNama">Nama paket</label>
+              <input class="form-control" id="fNama" required maxlength="200" placeholder="Misal: Jasa Kebersihan Gedung Kantor">
+            </div>
+            <div class="fld">
+              <label for="fPenyedia">Calon penyedia (Ketik untuk mencari)</label>
+              <input class="form-control" id="fPenyedia" list="listPenyedia" placeholder="Ketik nama PT/CV penyedia..." required autocomplete="off">
+              <datalist id="listPenyedia"></datalist>
+              <div id="badgeKategoriPenyedia" class="mt-1" style="display:none"></div>
+              <div class="pen-info" id="penyediaInfo" aria-live="polite"></div>
+            </div>
+            <div class="fld">
+              <label for="fLink">Link katalog penyedia</label>
+              <input class="form-control" id="fLink" type="url" required maxlength="500" placeholder="https://e-katalog.lkpp.go.id/..."><div class="link-prev" id="linkPrev"></div>
+            </div>
             <div class="fld">
               <label for="fHps">Nilai HPS</label>
               <div class="rp-wrap"><span class="rp">Rp</span><input class="form-control" id="fHps" inputmode="numeric" placeholder="0" required></div>
-              <div class="pen-info" id="penyediaInfo" aria-live="polite"></div>
             </div>
           </div>
           <div class="col-lg-6">
-            <div class="fld"><label for="fJenis">Jenis tenaga alih daya</label><select class="form-select" id="fJenis" required><option value="">Pilih jenis tenaga...</option></select></div>
-            <div class="fld"><label for="fJumlah">Jumlah tenaga</label><input class="form-control" id="fJumlah" type="number" min="1" step="1" placeholder="Jumlah personel" required></div>
+            <div class="fld">
+              <label for="fJenis">Jenis tenaga alih daya (Ketik untuk mencari)</label>
+              <input class="form-control" id="fJenis" list="listJenis" placeholder="Ketik jenis tenaga..." required autocomplete="off">
+              <datalist id="listJenis"></datalist>
+            </div>
+            <div class="fld">
+              <label for="fJumlah">Jumlah tenaga</label>
+              <input class="form-control" id="fJumlah" type="number" min="1" step="1" placeholder="Jumlah personel" required>
+            </div>
           </div>
         </div>
         <div id="fileSection" class="mb-4">
@@ -418,8 +510,10 @@
       </form>
     </section>
 
+    <!-- Navigasi Tab (Admin / Pokja) -->
     <div class="tabs" id="tabs" style="display:none"></div>
 
+    <!-- Pane 1: Daftar Pengajuan -->
     <div id="paneList">
       <div class="toolbar">
         <div><h2 class="sec-title" id="listTitle">Pengajuan</h2><div class="small-note" id="listCount"></div></div>
@@ -428,30 +522,168 @@
           <div class="search"><i class="bi bi-search"></i><input id="fltCari" placeholder="Cari paket, penyedia, atau OPD"></div>
         </div>
       </div>
-      <div class="grid" id="grid"></div>
+      <div id="grid"></div>
       <div class="text-center mt-4"><button class="btn btn-line px-4" id="btnMore" style="display:none">Tampilkan lebih banyak</button></div>
     </div>
 
+    <!-- Pane 2: Akumulasi Per Penyedia (Admin) -->
     <div id="panePen" style="display:none">
       <div class="small-note mb-3" id="penNote"></div>
       <div class="table-responsive">
         <table class="tbl">
-          <thead><tr><th>Penyedia</th><th>Akumulasi terhadap batas</th><th style="text-align:right">Total HPS</th><th>Status</th></tr></thead>
+          <thead><tr><th>Penyedia</th><th>Kategori</th><th>Akumulasi HPS</th><th style="text-align:right">Total Nilai</th><th>Status Batas Kuota</th></tr></thead>
           <tbody id="tbodyPen"></tbody>
         </table>
       </div>
     </div>
 
+    <!-- Pane 3: Kelola Akun Pengguna (Admin) -->
     <div id="paneAkun" style="display:none">
-      <div class="small-note mb-3">Akun OPD yang mendaftar sendiri berstatus Menunggu sampai disetujui.</div>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="small-note">Kelola pengguna sistem (OPD, Pokja, dan Admin). Admin dapat membuat akun langsung.</div>
+        <button class="btn btn-main btn-sm" id="btnBukaModalBuatAkun"><i class="bi bi-person-plus-fill me-1"></i> Buat Akun Baru</button>
+      </div>
       <div class="table-responsive">
         <table class="tbl">
-          <thead><tr><th>Satker</th><th>Username</th><th>Status</th><th style="text-align:right">Tindakan</th></tr></thead>
+          <thead><tr><th>Satker</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th style="text-align:right">Tindakan</th></tr></thead>
           <tbody id="tbodyAkun"></tbody>
         </table>
       </div>
     </div>
   </main>
+</div>
+
+<!-- =============================== MODAL GANTI PENYEDIA (OPD) =============================== -->
+<div class="modal fade" id="modalGantiPen" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-arrow-repeat text-warning me-2"></i>Ganti Calon Penyedia</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">Penyedia sebelumnya tidak disetujui pada verifikasi Tahap 1. Silakan pilih penyedia pengganti untuk diajukan kembali ke verifikasi Tahap 1.</p>
+        <div class="mb-3">
+          <div class="small-note">Nama Paket</div>
+          <div class="fw-bold" id="gpPaket"></div>
+        </div>
+        <div class="mb-3">
+          <div class="small-note">Penyedia Sebelumnya</div>
+          <div class="text-danger fw-semibold" id="gpPenyediaLama"></div>
+        </div>
+        <div class="fld">
+          <label for="gpPenyediaBaru">Calon Penyedia Baru (Ketik untuk mencari)</label>
+          <input class="form-control" id="gpPenyediaBaru" list="listPenyedia" placeholder="Ketik nama penyedia baru..." required autocomplete="off">
+          <div id="gpBadgeKategori" class="mt-1" style="display:none"></div>
+        </div>
+        <div class="fld">
+          <label for="gpHpsBaru">Penyesuaian Nilai HPS (Bisa diubah jika ada perubahan)</label>
+          <div class="rp-wrap"><span class="rp">Rp</span><input class="form-control" id="gpHpsBaru" inputmode="numeric" placeholder="0" required></div>
+        </div>
+        <div class="fld mb-1">
+          <label for="gpCatatan">Catatan Perubahan (Opsional)</label>
+          <textarea class="form-control" id="gpCatatan" rows="2" placeholder="Alasan penggantian penyedia..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-line" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-main" id="btnSimpanGantiPen">Ajukan Penyedia Baru</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =============================== MODAL UNDANGAN KLARIFIKASI (ADMIN) =============================== -->
+<div class="modal fade" id="modalUndanganKlarif" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-envelope-paper-fill text-warning me-2"></i>Buat Undangan Klarifikasi</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">Undangan ini akan dikirimkan kepada OPD untuk klarifikasi pengajuan (misal akumulasi melebihi Rp 15 Miliar).</p>
+        <div class="mb-3">
+          <div class="small-note">Paket Pengajuan</div>
+          <div class="fw-bold" id="ukPaket"></div>
+          <div class="small-note mt-1" id="ukPenyediaInfo"></div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-7">
+            <div class="fld mb-2">
+              <label for="ukTgl">Hari / Tanggal Klarifikasi</label>
+              <input class="form-control" id="ukTgl" type="date" required>
+            </div>
+          </div>
+          <div class="col-5">
+            <div class="fld mb-2">
+              <label for="ukJam">Waktu / Pukul</label>
+              <input class="form-control" id="ukJam" type="time" required value="09:00">
+            </div>
+          </div>
+        </div>
+        <div class="fld mb-2">
+          <label for="ukTempat">Tempat / Ruangan / Tautan Rapat</label>
+          <input class="form-control" id="ukTempat" required placeholder="Contoh: Ruang Rapat BPBJ Setda Lt. 2 / Zoom Meeting">
+        </div>
+        <div class="fld mb-2">
+          <label for="ukAgenda">Agenda Rapat</label>
+          <input class="form-control" id="ukAgenda" required value="Klarifikasi teknis dan akumulasi nilai HPS pengajuan penyedia tenaga alih daya">
+        </div>
+        <div class="fld mb-1">
+          <label for="ukCatatan">Catatan Tambahan untuk OPD</label>
+          <textarea class="form-control" id="ukCatatan" rows="2" placeholder="Harap membawa berkas KAK dan data dukung..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-line" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-main" id="btnKirimUndangan">Kirim Undangan Klarifikasi</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =============================== MODAL BUAT AKUN BARU (ADMIN) =============================== -->
+<div class="modal fade" id="modalBuatAkun" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-person-plus-fill text-warning me-2"></i>Buat Akun Pengguna Baru</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="baMsg" class="alert alert-danger py-2 small" style="display:none"></div>
+        <div class="fld mb-3">
+          <label for="baRole">Peran / Role Pengguna</label>
+          <select class="form-select" id="baRole">
+            <option value="OPD">OPD (Perangkat Daerah Pengaju)</option>
+            <option value="Pokja">Pokja (Verifikator Tahap 2 Dokumen)</option>
+            <option value="Admin">Admin (Verifikator Tahap 1 Penyedia & Administrator)</option>
+          </select>
+        </div>
+        <div class="fld mb-3">
+          <label for="baSatker">Nama Satker / OPD (Ketik untuk mencari)</label>
+          <input class="form-control" id="baSatker" list="listSatker" placeholder="Ketik nama satker..." required>
+        </div>
+        <div class="fld mb-3">
+          <label for="baEmail">Email</label>
+          <input class="form-control" id="baEmail" type="email" placeholder="user@instansi.go.id" required>
+        </div>
+        <div class="fld mb-3">
+          <label for="baUser">Username</label>
+          <input class="form-control" id="baUser" required minlength="3" placeholder="username_login">
+        </div>
+        <div class="fld mb-2">
+          <label for="baPass">Password</label>
+          <input class="form-control" id="baPass" type="password" required minlength="6" placeholder="Minimal 6 karakter">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-line" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-main" id="btnSimpanAkunBaru">Simpan Akun</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- =============================== MODAL LIMIT =============================== -->
@@ -474,7 +706,7 @@
   </div>
 </div>
 
-<!-- =============================== MODAL AKSI =============================== -->
+<!-- =============================== MODAL AKSI VERIFIKASI (ADMIN / POKJA) =============================== -->
 <div class="modal fade" id="modalAksi" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
@@ -490,7 +722,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-line" data-bs-dismiss="modal">Batal</button>
-        <button type="button" class="btn btn-main" id="btnAksiOk">Simpan</button>
+        <button type="button" class="btn btn-main" id="btnAksiOk">Simpan Keputusan</button>
       </div>
     </div>
   </div>
@@ -521,14 +753,14 @@
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <div><h5 class="modal-title">Klarifikasi</h5><div class="small-note" id="klarInfo"></div></div>
+        <div><h5 class="modal-title">Klarifikasi & Undangan Rapat</h5><div class="small-note" id="klarInfo"></div></div>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="chat-body" id="chatBody"></div>
       <div class="modal-footer d-block">
         <div class="d-flex gap-2 align-items-end">
-          <textarea class="form-control" id="chatInput" rows="2" maxlength="1000" placeholder="Tulis pesan..."></textarea>
-          <button class="btn btn-main" id="btnChatKirim" type="button">Kirim</button>
+          <textarea class="form-control" id="chatInput" rows="2" maxlength="1000" placeholder="Tulis pesan klarifikasi..."></textarea>
+          <button class="btn btn-main" id="btnChatKirim" type="button"><i class="bi bi-send-fill me-1"></i> Kirim</button>
         </div>
       </div>
     </div>
@@ -540,7 +772,7 @@
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <div><h5 class="modal-title" id="dpJudul"></h5><div class="small-note">Rincian pengajuan untuk penyedia ini</div></div>
+        <div><h5 class="modal-title" id="dpJudul"></h5><div class="small-note">Rincian akumulasi pengajuan untuk penyedia ini</div></div>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body" id="dpBody"></div>
@@ -553,7 +785,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 /* =====================================================================
- *  KONFIGURASI SUPABASE (Ganti dengan Project URL & Anon Key Supabase Anda)
+ *  KONFIGURASI SUPABASE & KONSTANTA
  * ===================================================================== */
 const RAW_SUPABASE_URL = "https://cccwpgjpzwaioopilxno.supabase.co/rest/v1/";
 const SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
@@ -561,13 +793,29 @@ const SUPABASE_ANON_KEY = "sb_publishable_mqR0IRjdCxTWsSSK0h63Dw_j5n7yKrr";
 
 const sbClient = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-const LIMIT = 15000000000;
-const UKURAN_HALAMAN = 24;
+const LIMIT = 15000000000; // Rp 15 Miliar
+const UKURAN_HALAMAN = 50;
 const JENIS_DOK = { kak: 'KAK / Spesifikasi teknis', kertas: 'Kertas kerja e-purchasing', hps: 'HPS' };
 const DOK_PENDEK = { kak: 'KAK', kertas: 'Kertas kerja', hps: 'HPS' };
-const ITEM_TOLAK = { kak: 'KAK / Spesifikasi teknis', kertas: 'Kertas kerja e-purchasing', hps: 'HPS', penyedia: 'Calon penyedia', link: 'Link katalog penyedia' };
+
+// Fitur 5: Hapus bagian link katalog dari pilihan item revisi
+const ITEM_TOLAK = { kak: 'KAK / Spesifikasi teknis', kertas: 'Kertas kerja e-purchasing', hps: 'HPS', penyedia: 'Calon penyedia' };
 const MAKS_MB = 10, EKSTENSI_OK = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
 const SESSION_KEY = 'pengajuan_sesi';
+
+// 4 Penyedia Non UMKK yang bisa > 15 Miliar
+const NON_UMKK_LIST = [
+  'perumda pau pedaringan kota surakarta',
+  'pt bintang mitra pratama',
+  'pt jaya wira manggala',
+  'pt muhandas permata sarana'
+];
+
+const normNama = s => String(s || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
+function isNonUmkk(nama) {
+  const n = normNama(nama);
+  return NON_UMKK_LIST.some(item => n.includes(item) || normNama(item) === n);
+}
 
 function setTema(t) {
   document.documentElement.setAttribute('data-bs-theme', t);
@@ -579,11 +827,7 @@ document.addEventListener('click', e => {
 });
 
 const SINGKATAN = {"badan kepegawaian dan pengembangan sumber daya manusia": "BKPSDM", "badan kesatuan bangsa dan politik": "Bakesbangpol", "badan penanggulangan bencana daerah": "BPBD", "badan pendapatan daerah": "Bapenda", "badan pengelolaan keuangan dan aset daerah": "BPKAD", "badan perencanaan pembangunan daerah": "Bappeda", "badan riset dan inovasi daerah": "Brida", "bagian administrasi pembangunan": "ADBANG", "bagian hukum": "HUKUM", "bagian kesejahteraan rakyat": "KESRA", "bagian organisasi": "BAGOR", "bagian pengadaan barang dan jasa": "BPBJ", "bagian perekonomian dan sumber daya alam": "PSDA", "bagian protokol, komunikasi dan administrasi pimpinan": "PROKOMPIM", "bagian tata pemerintahan": "TAPEM", "bagian umum": "UMUM", "dinas kebudayaan dan pariwisata": "Disbudpar", "dinas kepemudaan dan olahraga": "Dispora", "dinas kependudukan dan pencatatan sipil": "Disdukcapil", "dinas kesehatan": "Dinkes", "dinas ketahanan pangan dan pertanian": "Dispangtan", "dinas komunikasi, informatika, statistik dan persandian": "Diskominfo SP", "dinas koperasi usaha kecil dan menengah dan perindustrian": "Dinkop UKM Perin", "dinas lingkungan hidup": "DLH", "dinas pekerjaan umum dan penataan ruang": "DPUPR", "dinas pemadam kebakaran": "Damkar", "dinas pemberdayaan perempuan dan pelindungan anak serta pengendalian penduduk dan keluarga berencana": "DP3AP2KB", "dinas penanaman modal dan pelayanan terpadu satu pintu": "DPMPTSP", "dinas pendidikan": "Disdik", "dinas perdagangan": "Disdag", "dinas perhubungan": "Dishub", "dinas perpustakaan dan kearsipan": "Dispersip", "dinas perumahan, dan kawasan permukiman serta pertanahan": "Disperumkimtan", "dinas sosial": "Dinsos", "dinas tenaga kerja": "Disnaker", "inspektorat": "Inspektorat", "rsud bung karno": "RSBK", "rsud ibu fatmawati soekarno": "RSIFS", "satuan polisi pamong praja": "Satpol PP", "sekretariat daerah": "Setda", "sekretariat dewan perwakilan rakyat daerah": "Setwan"};
-const normNama = s => String(s || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
-function singkatan(nama) {
-  const k = normNama(nama);
-  return SINGKATAN[k] || null;
-}
+function singkatan(nama) { return SINGKATAN[normNama(nama)] || null; }
 
 const $ = (s, el) => (el || document).querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -594,9 +838,17 @@ const store = (function () {
   catch (e) { const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = v; }, removeItem: k => { delete m[k]; } }; }
 })();
 
-const state = { username: null, role: null, ringkasan: null, list: [], total: 0, halaman: 1, memuat: false,
-                filter: '', cari: '', tab: 'pengajuan', penyedia: null, pen: { nama: '', total: 0, jumlah: 0, ada: false },
-                satker: '', ref: null, akun: null, detId: 0, editingId: null, dokId: null, konfirmasiAksi: null, klarId: null, klarSub: null };
+// Role helper
+const isAdmin = r => r === 'Admin' || r === 'Tim Konsolidasi';
+const isPokja = r => r === 'Pokja';
+const isOpd = r => r === 'OPD';
+
+const state = {
+  username: null, role: null, email: null, ringkasan: null, list: [], total: 0, halaman: 1, memuat: false,
+  filter: '', cari: '', tab: 'pengajuan', penyedia: null, pen: { nama: '', total: 0, jumlah: 0, ada: false, isNonUmkk: false },
+  satker: '', ref: null, akun: null, detId: 0, editingId: null, dokId: null, konfirmasiAksi: null, klarId: null, klarSub: null,
+  expandedOpd: {} // Menyimpan state toggle OPD di tampilan Admin / Pokja
+};
 
 function toast(msg, type) {
   const el = document.createElement('div');
@@ -615,7 +867,7 @@ function busy(btn, on, teks) {
 const gagal = e => { if (!e) return; toast(e.message || 'Terjadi kesalahan.', 'danger'); };
 
 /* =====================================================================
- *  ADAPTER SUPABASE: Menggantikan fungsi backend GAS (Code.gs)
+ *  API ADAPTER DENGAN SUPABASE
  * ===================================================================== */
 const api = async (fn, ...args) => {
   if (!sbClient) throw new Error('Supabase Client belum dikonfigurasi. Periksa SUPABASE_URL & KEY.');
@@ -627,37 +879,72 @@ const api = async (fn, ...args) => {
       if (error) throw error;
       return data;
     }
+    case 'mintaResetPassword': {
+      const [email] = args;
+      const { data, error } = await sbClient.rpc('minta_reset_password', { p_email: email });
+      if (error) throw error;
+      return data;
+    }
+    case 'prosesResetPassword': {
+      const [email, token, passBaru] = args;
+      const { data, error } = await sbClient.rpc('proses_reset_password', { p_email: email, p_token: token, p_password_baru: passBaru });
+      if (error) throw error;
+      return data;
+    }
     case 'getReferensi': {
       const [rS, rJ, rP] = await Promise.all([
         sbClient.from('referensi_satker').select('nama').order('nama'),
         sbClient.from('referensi_jenis_tenaga').select('nama').order('nama'),
-        sbClient.from('referensi_penyedia').select('nama').order('nama')
+        sbClient.from('referensi_penyedia').select('nama, kategori').order('nama')
       ]);
       return {
         satker: (rS.data || []).map(x => x.nama),
         jenis: (rJ.data || []).map(x => x.nama),
-        penyedia: (rP.data || []).map(x => x.nama)
+        penyedia: (rP.data || []).map(x => ({
+          nama: x.nama,
+          kategori: x.kategori || (isNonUmkk(x.nama) ? 'Non UMKK' : 'UMKK')
+        }))
       };
     }
     case 'daftarAkun': {
-      const [satker, username, password] = args;
-      // Gunakan RPC login / pgcrypto digest di server
-      const { data: exist } = await sbClient.from('app_users').select('username').ilike('username', username).maybeSingle();
-      if (exist) return { ok: false, message: 'Username sudah dipakai.' };
+      const [satker, username, password, email] = args;
+      const { data: existU } = await sbClient.from('app_users').select('username').ilike('username', username).limit(1);
+      if (existU && existU.length > 0) return { ok: false, message: 'Username sudah dipakai.' };
 
-      // Buat akun baru via RPC/table
+      if (email) {
+        const { data: existE } = await sbClient.from('app_users').select('email').ilike('email', email).limit(1);
+        if (existE && existE.length > 0) return { ok: false, message: 'Email sudah terdaftar.' };
+      }
+
       const { error } = await sbClient.from('app_users').insert([{
         username: username,
-        password_hash: password, // jika menggunakan plain / disederhanakan
+        email: email || null,
+        password_hash: password,
         role: 'OPD',
         satker: satker,
         status: 'Menunggu'
       }]);
       if (error) throw error;
-      return { ok: true, message: 'Pendaftaran berhasil untuk ' + satker + '. Akun akan aktif setelah disetujui Tim Konsolidasi.' };
+      return { ok: true, message: 'Pendaftaran berhasil untuk ' + satker + '. Akun akan aktif setelah disetujui Admin.' };
+    }
+    case 'buatAkunAdmin': {
+      const [satker, username, email, password, role] = args;
+      const { data: existU } = await sbClient.from('app_users').select('username').ilike('username', username).limit(1);
+      if (existU && existU.length > 0) return { ok: false, message: 'Username sudah digunakan.' };
+
+      const { error } = await sbClient.from('app_users').insert([{
+        username: username,
+        email: email || null,
+        password_hash: password,
+        role: role,
+        satker: satker,
+        status: 'Aktif'
+      }]);
+      if (error) throw error;
+      return { ok: true, message: 'Akun ' + role + ' (' + username + ') berhasil dibuat.' };
     }
     case 'getAkun': {
-      const { data, error } = await sbClient.from('app_users').select('username, satker, status').eq('role', 'OPD');
+      const { data, error } = await sbClient.from('app_users').select('username, email, satker, role, status').order('created_at', { ascending: false });
       if (error) throw error;
       return { akun: data || [] };
     }
@@ -672,13 +959,14 @@ const api = async (fn, ...args) => {
       const { data, error } = await sbClient.rpc('hitung_total_penyedia', { p_penyedia: nama, p_exclude_id: excludeId || null });
       if (error) throw error;
       const r = (data && data[0]) ? data[0] : { total: 0, jumlah: 0 };
-      return { ok: true, total: Number(r.total), jumlah: Number(r.jumlah), limit: LIMIT };
+      const nonUmkk = isNonUmkk(nama);
+      return { ok: true, total: Number(r.total), jumlah: Number(r.jumlah), limit: LIMIT, isNonUmkk: nonUmkk };
     }
     case 'getPengajuan': {
       const [opsi] = args;
       const hal = opsi.halaman || 1, uk = opsi.ukuran || UKURAN_HALAMAN;
       let q = sbClient.from('pengajuan').select('*', { count: 'exact' });
-      if (state.role === 'OPD') q = q.eq('opd_pengaju', state.satker);
+      if (isOpd(state.role)) q = q.eq('opd_pengaju', state.satker);
       if (opsi.status) q = q.eq('status', opsi.status);
       if (opsi.cari) q = q.or(`nama_paket.ilike.%${opsi.cari}%,calon_penyedia.ilike.%${opsi.cari}%,opd_pengaju.ilike.%${opsi.cari}%,id.ilike.%${opsi.cari}%`);
 
@@ -686,15 +974,18 @@ const api = async (fn, ...args) => {
       const { data, count, error } = await q.order('created_at', { ascending: false }).range(from, to);
       if (error) throw error;
 
-      // Ringkasan
       let qR = sbClient.from('pengajuan').select('status, nilai_hps');
-      if (state.role === 'OPD') qR = qR.eq('opd_pengaju', state.satker);
+      if (isOpd(state.role)) qR = qR.eq('opd_pengaju', state.satker);
       const { data: allR } = await qR;
       const j = { Pending: 0, Revisi: 0, Disetujui: 0, Ditolak: 0 };
       let tot = 0;
       (allR || []).forEach(x => {
-        if (j[x.status] !== undefined) j[x.status]++;
-        if (x.status !== 'Ditolak') tot += Number(x.nilai_hps);
+        const st = (x.status === 'Menunggu Verifikasi Tahap 1' || x.status === 'Undangan Klarifikasi' || x.status === 'Menunggu Verifikasi Tahap 2') ? 'Pending'
+                 : (x.status === 'Revisi Dokumen') ? 'Revisi'
+                 : (x.status === 'Penyedia Ditolak') ? 'Ditolak'
+                 : x.status;
+        if (j[st] !== undefined) j[st]++;
+        if (x.status !== 'Ditolak' && x.status !== 'Penyedia Ditolak') tot += Number(x.nilai_hps);
       });
 
       const list = (data || []).map(p => {
@@ -714,6 +1005,9 @@ const api = async (fn, ...args) => {
           Jenis_Tenaga_Alih_Daya: p.jenis_tenaga_alih_daya,
           Jumlah_Tenaga: p.jumlah_tenaga,
           Status: p.status,
+          Tahap: p.tahap || (p.status === 'Menunggu Verifikasi Tahap 2' || p.status === 'Revisi Dokumen' || p.status === 'Disetujui' ? 2 : 1),
+          UndanganKlarifikasi: p.undangan_klarifikasi || null,
+          RiwayatPenyedia: p.riwayat_penyedia || [],
           Link_Katalog: p.link_katalog,
           Catatan_Umum: p.catatan_umum,
           CatatanItem: p.catatan_item || {},
@@ -730,15 +1024,15 @@ const api = async (fn, ...args) => {
       if (error) throw error;
       const peta = {};
       (data || []).forEach(r => {
-        if (r.status === 'Ditolak') return;
+        if (r.status === 'Ditolak' || r.status === 'Penyedia Ditolak') return;
         const k = r.calon_penyedia.trim();
-        if (!peta[k]) peta[k] = { nama: k, total: 0, jumlah: 0, opd: new Set() };
+        if (!peta[k]) peta[k] = { nama: k, total: 0, jumlah: 0, opd: new Set(), isNonUmkk: isNonUmkk(k) };
         peta[k].total += Number(r.nilai_hps);
         peta[k].jumlah++;
         peta[k].opd.add(r.opd_pengaju);
       });
       const penyedia = Object.values(peta).map(p => ({
-        nama: p.nama, total: p.total, jumlah: p.jumlah, opd: Array.from(p.opd)
+        nama: p.nama, total: p.total, jumlah: p.jumlah, opd: Array.from(p.opd), isNonUmkk: p.isNonUmkk
       })).sort((a,b) => b.total - a.total);
       return { penyedia };
     }
@@ -748,7 +1042,7 @@ const api = async (fn, ...args) => {
       if (error) throw error;
       let total = 0, jumlah = 0;
       const list = (data || []).map(p => {
-        const dihitung = p.status !== 'Ditolak';
+        const dihitung = p.status !== 'Ditolak' && p.status !== 'Penyedia Ditolak';
         if (dihitung) { total += Number(p.nilai_hps); jumlah++; }
         return {
           ID_Pengajuan: p.id,
@@ -765,26 +1059,21 @@ const api = async (fn, ...args) => {
           dihitung: dihitung
         };
       });
-      return { ok: true, nama, total, jumlah, limit: LIMIT, list };
+      return { ok: true, nama, total, jumlah, limit: LIMIT, isNonUmkk: isNonUmkk(nama), list };
     }
     case 'submitPengajuan': {
-      const [d, konfirmasiLimit] = args;
-      if (state.role === 'Tim Konsolidasi') {
-        const { data: totalData } = await sbClient.rpc('hitung_total_penyedia', { p_penyedia: d.penyedia });
-        const totalLama = (totalData && totalData[0]) ? Number(totalData[0].total) : 0;
-        const setelah = totalLama + Number(d.nilai);
-
-        if (setelah > LIMIT && !konfirmasiLimit) {
-          return {
-            ok: false, code: 'LIMIT', bolehLanjut: true, penyedia: d.penyedia,
-            total: totalLama, nilaiBaru: d.nilai, setelah: setelah, lebih: setelah - LIMIT, limit: LIMIT,
-            message: 'Batas Rp 15 miliar untuk penyedia ini telah terlewati.'
-          };
-        }
+      const [d] = args;
+      let newId = null;
+      try {
+        const { data: idData, error: idErr } = await sbClient.rpc('buat_id_pengajuan');
+        if (!idErr && idData) newId = idData;
+      } catch (e) {
+        console.warn('Fallback ID generator:', e);
       }
-
-      const { data: idData } = await sbClient.rpc('buat_id_pengajuan');
-      const newId = idData || ('PGJ-' + Date.now());
+      if (!newId) {
+        const tgl = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        newId = 'PGJ-' + tgl + '-' + Math.floor(1000 + Math.random() * 9000);
+      }
 
       const { error } = await sbClient.from('pengajuan').insert([{
         id: newId,
@@ -794,28 +1083,72 @@ const api = async (fn, ...args) => {
         nilai_hps: d.nilai,
         jenis_tenaga_alih_daya: d.jenis,
         jumlah_tenaga: d.jumlah,
-        link_katalog: d.link,
-        status: 'Pending'
+        link_katalog: d.link || null,
+        status: 'Menunggu Verifikasi Tahap 1',
+        tahap: 1
       }]);
       if (error) throw error;
-      return { ok: true, id: newId, message: 'Pengajuan ' + newId + ' berhasil dikirim.' };
+      return { ok: true, id: newId, message: 'Pengajuan ' + newId + ' berhasil dikirim ke Verifikasi Tahap 1 (Admin).' };
+    }
+    case 'gantiPenyediaOpd': {
+      const [id, penyediaBaru, hpsBaru, catatan] = args;
+      const { data: listLama, error: errLama } = await sbClient.from('pengajuan').select('*').eq('id', id).limit(1);
+      const lama = (listLama && listLama.length > 0) ? listLama[0] : null;
+      if (!lama) throw new Error('Pengajuan tidak ditemukan.');
+
+      const riwayat = lama.riwayat_penyedia || [];
+      riwayat.push({
+        penyedia_lama: lama.calon_penyedia,
+        hps_lama: lama.nilai_hps,
+        tanggal: new Date().toISOString(),
+        alasan: catatan || 'Penggantian penyedia setelah verifikasi Tahap 1'
+      });
+
+      const { error } = await sbClient.from('pengajuan').update({
+        calon_penyedia: penyediaBaru,
+        nilai_hps: hpsBaru || lama.nilai_hps,
+        status: 'Menunggu Verifikasi Tahap 1',
+        tahap: 1,
+        riwayat_penyedia: riwayat
+      }).eq('id', id);
+      if (error) throw error;
+
+      await sbClient.from('klarifikasi').insert([{
+        id_pengajuan: id,
+        pengirim: state.username,
+        role: state.role,
+        pesan: '[Ganti Penyedia] OPD telah mengganti penyedia menjadi "' + penyediaBaru + '" (HPS: ' + rp(hpsBaru || lama.nilai_hps) + '). ' + (catatan ? 'Catatan: ' + catatan : '')
+      }]);
+
+      return { ok: true, message: 'Penyedia berhasil diganti dan diajukan kembali ke Verifikasi Tahap 1.' };
+    }
+    case 'kirimUndanganKlarifikasi': {
+      const [id, dataUndangan] = args;
+      const { error } = await sbClient.from('pengajuan').update({
+        status: 'Undangan Klarifikasi',
+        undangan_klarifikasi: dataUndangan
+      }).eq('id', id);
+      if (error) throw error;
+
+      const teksUndangan = '📋 [UNDANGAN KLARIFIKASI]\n' +
+        'Nomor: ' + (dataUndangan.nomor || '-') + '\n' +
+        'Hari/Tanggal: ' + dataUndangan.tanggal + '\n' +
+        'Pukul: ' + dataUndangan.waktu + ' WIB\n' +
+        'Tempat/Media: ' + dataUndangan.tempat + '\n' +
+        'Agenda: ' + dataUndangan.agenda + '\n' +
+        (dataUndangan.catatan ? 'Catatan: ' + dataUndangan.catatan : '');
+
+      await sbClient.from('klarifikasi').insert([{
+        id_pengajuan: id,
+        pengirim: state.username,
+        role: state.role,
+        pesan: teksUndangan
+      }]);
+
+      return { ok: true, message: 'Undangan klarifikasi berhasil dikirimkan ke OPD.' };
     }
     case 'revisiPengajuan': {
-      const [id, d, konfirmasiLimit] = args;
-      if (state.role === 'Tim Konsolidasi') {
-        const { data: totalData } = await sbClient.rpc('hitung_total_penyedia', { p_penyedia: d.penyedia, p_exclude_id: id });
-        const totalLama = (totalData && totalData[0]) ? Number(totalData[0].total) : 0;
-        const setelah = totalLama + Number(d.nilai);
-
-        if (setelah > LIMIT && !konfirmasiLimit) {
-          return {
-            ok: false, code: 'LIMIT', bolehLanjut: true, penyedia: d.penyedia,
-            total: totalLama, nilaiBaru: d.nilai, setelah: setelah, lebih: setelah - LIMIT, limit: LIMIT,
-            message: 'Batas Rp 15 miliar untuk penyedia ini telah terlewati.'
-          };
-        }
-      }
-
+      const [id, d] = args;
       const { error } = await sbClient.from('pengajuan').update({
         nama_paket: d.nama,
         calon_penyedia: d.penyedia,
@@ -823,7 +1156,7 @@ const api = async (fn, ...args) => {
         jenis_tenaga_alih_daya: d.jenis,
         jumlah_tenaga: d.jumlah,
         link_katalog: d.link,
-        status: 'Pending',
+        status: 'Menunggu Verifikasi Tahap 1',
         catatan_umum: '',
         catatan_item: {}
       }).eq('id', id);
@@ -832,11 +1165,23 @@ const api = async (fn, ...args) => {
     }
     case 'ubahStatus': {
       const [id, statusBaru, catatan, items] = args;
-      const { error } = await sbClient.from('pengajuan').update({
+      const updateData = {
         status: statusBaru,
         catatan_umum: statusBaru === 'Disetujui' ? '' : catatan,
         catatan_item: items || {}
-      }).eq('id', id);
+      };
+
+      if (statusBaru === 'Menunggu Verifikasi Tahap 2') {
+        updateData.tahap = 2;
+        updateData.verifikator_tahap1 = state.username;
+        updateData.tgl_verifikasi_tahap1 = new Date().toISOString();
+      } else if (statusBaru === 'Disetujui' || statusBaru === 'Revisi Dokumen') {
+        updateData.tahap = 2;
+        updateData.verifikator_tahap2 = state.username;
+        updateData.tgl_verifikasi_tahap2 = new Date().toISOString();
+      }
+
+      const { error } = await sbClient.from('pengajuan').update(updateData).eq('id', id);
       if (error) throw error;
 
       let pesan = '[Status: ' + statusBaru + ']' + (catatan ? ' ' + catatan : '');
@@ -876,15 +1221,25 @@ const api = async (fn, ...args) => {
     }
     case 'unggahDokumen': {
       const [id, jenis, namaFile, file] = args;
-      const cleanName = namaFile.replace(/[\\\/:*?"<>|]/g, '_');
+      const extMatch = String(namaFile || '').match(/\.([^.]+)$/);
+      const ext = extMatch ? extMatch[1].toLowerCase() : 'pdf';
+      const rawBase = extMatch ? namaFile.slice(0, -extMatch[0].length) : namaFile;
+      const cleanBase = rawBase.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').substring(0, 40);
+      const cleanName = `${cleanBase}.${ext}`;
       const storagePath = `${id}/${jenis}_${cleanName}`;
 
-      const { error: upErr } = await sbClient.storage.from('dokumen-pengajuan').upload(storagePath, file, { upsert: true });
-      if (upErr) throw upErr;
+      const { error: upErr } = await sbClient.storage.from('dokumen-pengajuan').upload(storagePath, file, {
+        upsert: true,
+        contentType: file.type || 'application/octet-stream'
+      });
+      if (upErr) {
+        console.error('Storage Upload Error:', upErr);
+        throw new Error('Gagal unggah ke Supabase Storage (' + (upErr.message || 'Error') + ').');
+      }
 
       const colName = 'dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis);
       const updateData = {};
-      updateData[colName] = `${storagePath}|${cleanName}`;
+      updateData[colName] = `${storagePath}|${namaFile}`;
 
       const { error: dbErr } = await sbClient.from('pengajuan').update(updateData).eq('id', id);
       if (dbErr) throw dbErr;
@@ -901,8 +1256,9 @@ const api = async (fn, ...args) => {
     }
     case 'unduhDokumen': {
       const [id, jenis] = args;
-      const { data, error } = await sbClient.from('pengajuan').select('*').eq('id', id).maybeSingle();
-      if (error || !data) return { ok: false, message: 'Pengajuan tidak ditemukan.' };
+      const { data: listP, error } = await sbClient.from('pengajuan').select('*').eq('id', id).limit(1);
+      if (error || !listP || !listP.length) return { ok: false, message: 'Pengajuan tidak ditemukan.' };
+      const data = listP[0];
       const raw = data['dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis)];
       if (!raw) return { ok: false, message: 'Dokumen belum ada.' };
 
@@ -914,8 +1270,11 @@ const api = async (fn, ...args) => {
       }
 
       const { data: urlData } = sbClient.storage.from('dokumen-pengajuan').getPublicUrl(pathOrLink);
-      window.open(urlData.publicUrl, '_blank');
-      return { ok: true };
+      if (urlData && urlData.publicUrl) {
+        window.open(urlData.publicUrl, '_blank');
+        return { ok: true };
+      }
+      return { ok: false, message: 'URL berkas tidak dapat dibuka.' };
     }
     default:
       throw new Error('Fungsi ' + fn + ' belum diimplementasikan.');
@@ -924,7 +1283,7 @@ const api = async (fn, ...args) => {
 const call = (fn, ...args) => api(fn, ...args);
 
 /* =====================================================================
- *  LOGIKA UI (Sama persis seperti sebelumnya)
+ *  LOGIKA UI & EVENT HANDLER
  * ===================================================================== */
 function tampil(id) {
   $('#loginView').style.display = id === 'loginView' ? 'grid' : 'none';
@@ -933,10 +1292,10 @@ function tampil(id) {
 
 function keluar(pesan) {
   store.removeItem(SESSION_KEY);
-  Object.assign(state, { username: null, role: null, ringkasan: null, list: [], total: 0, penyedia: null, akun: null, satker: '', editingId: null, filter: '', cari: '' });
+  Object.assign(state, { username: null, role: null, email: null, ringkasan: null, list: [], total: 0, penyedia: null, akun: null, satker: '', editingId: null, filter: '', cari: '' });
   document.querySelectorAll('.modal.show').forEach(m => bootstrap.Modal.getOrCreateInstance(m).hide());
   tampil('loginView');
-  tampilFormMasuk(true);
+  tampilFormMasuk('login');
   if (pesan) pesanLogin(pesan, false); else $('#loginMsg').style.display = 'none';
 }
 
@@ -945,29 +1304,75 @@ function pesanLogin(teks, sukses) {
   b.className = 'alert py-2 small alert-' + (sukses ? 'success' : 'danger');
   b.textContent = teks; b.style.display = '';
 }
-function tampilFormMasuk(masuk) {
-  $('#loginForm').style.display = masuk ? '' : 'none';
-  $('#regForm').style.display = masuk ? 'none' : '';
-  if (!masuk && !state.ref) muatReferensi();
+
+function tampilFormMasuk(mode) {
+  $('#loginForm').style.display = mode === 'login' ? '' : 'none';
+  $('#regForm').style.display = mode === 'reg' ? '' : 'none';
+  $('#lupaForm').style.display = mode === 'lupa' ? '' : 'none';
+  if (mode !== 'login' && !state.ref) muatReferensi();
 }
-$('#btnKeDaftar').addEventListener('click', () => { $('#regMsg').style.display = 'none'; tampilFormMasuk(false); $('#regSatker').focus(); });
-$('#btnKeMasuk').addEventListener('click', () => { $('#loginMsg').style.display = 'none'; tampilFormMasuk(true); $('#inUser').focus(); });
+
+$('#btnKeDaftar').addEventListener('click', () => { $('#regMsg').style.display = 'none'; tampilFormMasuk('reg'); $('#regSatker').focus(); });
+$('#btnKeMasuk').addEventListener('click', () => { $('#loginMsg').style.display = 'none'; tampilFormMasuk('login'); $('#inUser').focus(); });
+$('#btnKeLupa').addEventListener('click', () => {
+  $('#lupaMsg').style.display = 'none';
+  $('#lupaStep1').style.display = '';
+  $('#lupaStep2').style.display = 'none';
+  tampilFormMasuk('lupa');
+  $('#lupaEmail').focus();
+});
+$('#btnLupaKeMasuk').addEventListener('click', () => { tampilFormMasuk('login'); $('#inUser').focus(); });
+
+// Reset Password Handlers
+$('#btnKirimOtp').addEventListener('click', async () => {
+  const email = $('#lupaEmail').value.trim();
+  const box = $('#lupaMsg');
+  if (!email) { box.className = 'alert py-2 small alert-danger'; box.textContent = 'Masukkan email terdaftar Anda.'; box.style.display = ''; return; }
+  const btn = $('#btnKirimOtp'); busy(btn, true, 'Memeriksa Email');
+  try {
+    const res = await api('mintaResetPassword', email);
+    if (!res.ok) { box.className = 'alert py-2 small alert-danger'; box.textContent = res.message; box.style.display = ''; return; }
+    box.className = 'alert py-2 small alert-success';
+    box.innerHTML = 'Kode verifikasi berhasil dibuat! ' + (res.token ? '<br>Kode verifikasi Anda: <b>' + res.token + '</b>' : 'Silakan periksa email.');
+    box.style.display = '';
+    if (res.token) $('#lupaToken').value = res.token;
+    $('#lupaStep1').style.display = 'none';
+    $('#lupaStep2').style.display = '';
+    $('#lupaPassBaru').focus();
+  } catch (err) { gagal(err); }
+  finally { busy(btn, false); }
+});
+
+$('#btnSimpanPassBaru').addEventListener('click', async () => {
+  const email = $('#lupaEmail').value.trim();
+  const token = $('#lupaToken').value.trim();
+  const pass = $('#lupaPassBaru').value;
+  const box = $('#lupaMsg');
+  if (!token || token.length < 6) { box.className = 'alert py-2 small alert-danger'; box.textContent = 'Masukkan 6 digit kode verifikasi.'; box.style.display = ''; return; }
+  if (!pass || pass.length < 6) { box.className = 'alert py-2 small alert-danger'; box.textContent = 'Password baru minimal 6 karakter.'; box.style.display = ''; return; }
+  const btn = $('#btnSimpanPassBaru'); busy(btn, true, 'Menyimpan');
+  try {
+    const res = await api('prosesResetPassword', email, token, pass);
+    if (!res.ok) { box.className = 'alert py-2 small alert-danger'; box.textContent = res.message; box.style.display = ''; return; }
+    tampilFormMasuk('login');
+    pesanLogin(res.message, true);
+  } catch (err) { gagal(err); }
+  finally { busy(btn, false); }
+});
 
 $('#regForm').addEventListener('submit', async e => {
   e.preventDefault();
   const box = $('#regMsg');
   const tampilPesan = (t, ok) => { box.className = 'alert py-2 small alert-' + (ok ? 'success' : 'danger'); box.textContent = t; box.style.display = ''; };
-  const norm = s => String(s).trim().replace(/\s+/g, ' ').toLowerCase();
-  const ketik = norm($('#regSatker').value);
-  const daftar = state.ref ? state.ref.satker : [];
-  const satker = daftar.find(s => norm(s) === ketik);
-  if (!satker) { tampilPesan('Pilih nama satker dari daftar yang muncul saat Anda mengetik.'); $('#regSatker').focus(); return; }
+  const satker = $('#regSatker').value.trim();
+  if (!satker) { tampilPesan('Pilih atau ketik nama satker Anda.'); $('#regSatker').focus(); return; }
+  const email = $('#regEmail').value.trim();
   const btn = $('#btnDaftar'); busy(btn, true, 'Mendaftar');
   try {
-    const r = await api('daftarAkun', satker, $('#regUser').value, $('#regPass').value);
+    const r = await api('daftarAkun', satker, $('#regUser').value, $('#regPass').value, email);
     if (!r.ok) { tampilPesan(r.message); return; }
     $('#regForm').reset();
-    tampilFormMasuk(true);
+    tampilFormMasuk('login');
     pesanLogin(r.message, true);
   } catch (err) { tampilPesan(err.message || 'Terjadi kesalahan.'); }
   finally { busy(btn, false); }
@@ -979,21 +1384,40 @@ async function muatReferensi() {
 function isiReferensi() {
   const r = state.ref; if (!r) return;
   $('#listSatker').innerHTML = r.satker.map(s => '<option value="' + esc(s) + '"></option>').join('');
-  const isi = (el, arr, placeholder) => {
-    const lama = el.value;
-    el.innerHTML = '<option value="">' + placeholder + '</option>' + arr.map(s => '<option value="' + esc(s) + '">' + esc(s) + '</option>').join('');
-    if (lama) setPilihan(el, lama);
-  };
-  isi($('#fPenyedia'), r.penyedia, 'Pilih calon penyedia');
-  isi($('#fJenis'), r.jenis, 'Pilih jenis tenaga alih daya');
+  
+  // Searchable Datalist untuk Calon Penyedia
+  $('#listPenyedia').innerHTML = r.penyedia.map(p => {
+    const label = p.nama + (p.kategori === 'Non UMKK' ? ' [Non UMKK - Bebas Batas 15M]' : ' [UMKK - Maks 15M]');
+    return '<option value="' + esc(p.nama) + '">' + esc(label) + '</option>';
+  }).join('');
+
+  // Searchable Datalist untuk Jenis Tenaga
+  $('#listJenis').innerHTML = r.jenis.map(s => '<option value="' + esc(s) + '"></option>').join('');
 }
-function setPilihan(el, nilai) {
-  el.value = nilai;
-  if (nilai && el.value !== nilai) {
-    const o = document.createElement('option'); o.value = nilai; o.textContent = nilai;
-    el.appendChild(o); el.value = nilai;
+
+// Deteksi Kategori Penyedia saat Ketik / Pilih
+function updateBadgePenyedia(nama, elBadge) {
+  if (!elBadge) return;
+  if (!nama) { elBadge.style.display = 'none'; return; }
+  const nonUmkk = isNonUmkk(nama);
+  elBadge.style.display = 'inline-block';
+  if (nonUmkk) {
+    elBadge.innerHTML = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-building-check me-1"></i>Non UMKK (Bisa lebih dari Rp 15 Miliar)</span>';
+  } else {
+    elBadge.innerHTML = '<span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-shield-check me-1"></i>UMKK (Batas akumulasi pengajuan Rp 15 Miliar)</span>';
   }
 }
+
+$('#fPenyedia').addEventListener('input', () => {
+  const nama = $('#fPenyedia').value.trim();
+  updateBadgePenyedia(nama, $('#badgeKategoriPenyedia'));
+  if (isAdmin(state.role)) cekPenyedia(nama);
+});
+
+$('#gpPenyediaBaru').addEventListener('input', () => {
+  const nama = $('#gpPenyediaBaru').value.trim();
+  updateBadgePenyedia(nama, $('#gpBadgeKategori'));
+});
 
 $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -1001,7 +1425,7 @@ $('#loginForm').addEventListener('submit', async e => {
   try {
     const r = await api('login', $('#inUser').value, $('#inPass').value);
     if (!r.ok) { pesanLogin(r.message, false); return; }
-    store.setItem(SESSION_KEY, JSON.stringify({ username: r.username, role: r.role, satker: r.satker }));
+    store.setItem(SESSION_KEY, JSON.stringify({ username: r.username, role: r.role, satker: r.satker, email: r.email }));
     $('#inPass').value = '';
     mulaiSesi(r);
   } catch (err) { gagal(err); }
@@ -1010,26 +1434,37 @@ $('#loginForm').addEventListener('submit', async e => {
 $('#btnLogout').addEventListener('click', () => keluar());
 
 function mulaiSesi(s) {
-  Object.assign(state, { username: s.username, role: s.role, tab: 'pengajuan', filter: '', cari: '', satker: s.satker || '', akun: null });
-  const opd = s.role === 'OPD';
+  Object.assign(state, { username: s.username, role: s.role, email: s.email, tab: 'pengajuan', filter: '', cari: '', satker: s.satker || '', akun: null });
+  const opd = isOpd(s.role);
+  const admin = isAdmin(s.role);
+  const pokja = isPokja(s.role);
+
   $('#whoName').textContent = opd ? (s.satker || s.username) : s.username;
-  $('#whoRole').textContent = opd ? s.role + ' (' + s.username + ')' : s.role;
+  $('#whoBadgeRole').textContent = s.role;
+  $('#whoRole').textContent = opd ? '(' + s.username + ')' : (s.satker || 'Surakarta');
   $('#heroTag').textContent = s.role;
   $('#heroSub').textContent = opd
-    ? 'Halo, ' + (s.satker || s.username) + '. Ajukan paket, lengkapi dokumen, dan pantau keputusan Tim Konsolidasi.'
-    : 'Halo, ' + s.username + '. Tinjau pengajuan dari seluruh OPD dan pantau akumulasi HPS tiap penyedia.';
-  $('#qLabel').textContent = opd ? 'Total HPS pengajuan saya' : 'Total HPS seluruh pengajuan aktif';
-  $('#listTitle').textContent = opd ? 'Pengajuan saya' : 'Verifikasi pengajuan';
+    ? 'Halo, ' + (s.satker || s.username) + '. Ajukan paket pengajuan, lengkapi dokumen KAK, Kertas Kerja, HPS, dan pantau proses verifikasi.'
+    : pokja
+    ? 'Halo, Pokja ' + s.username + '. Lakukan Verifikasi Tahap 2 untuk Dokumen Persiapan (KAK, Kertas Kerja, HPS) pada paket yang telah lolos Tahap 1.'
+    : 'Halo, Admin ' + s.username + '. Lakukan Verifikasi Tahap 1 untuk Calon Penyedia & Evaluasi Batas Kuota 15 Miliar (UMKK vs Non UMKK).';
+
+  $('#qLabel').textContent = opd ? 'Total HPS pengajuan saya' : 'Total HPS pengajuan aktif';
+  $('#listTitle').textContent = opd ? 'Pengajuan Saya' : pokja ? 'Verifikasi Dokumen (Tahap 2)' : 'Verifikasi Pengajuan (Tahap 1)';
+  
   $('#heroCta').innerHTML = opd
-    ? '<button class="btn btn-main btn-lg px-4" data-act="baru"><i class="bi bi-plus-lg"></i> Ajukan paket baru</button>'
-    : '<button class="btn btn-main btn-lg px-4" data-act="tabpen"><i class="bi bi-bar-chart-steps"></i> Akumulasi per penyedia</button>';
+    ? '<button class="btn btn-main btn-lg px-4" data-act="baru"><i class="bi bi-plus-lg me-1"></i> Ajukan paket baru</button>'
+    : admin
+    ? '<button class="btn btn-main btn-lg px-4" data-act="tabpen"><i class="bi bi-bar-chart-steps me-1"></i> Akumulasi per penyedia</button>'
+    : '<button class="btn btn-main btn-lg px-4" data-act="refresh"><i class="bi bi-arrow-clockwise me-1"></i> Muat Ulang Data</button>';
+
   $('#fltCari').value = '';
   tampil('appView');
   resetForm(); tutupForm();
   renderTab();
   muatData();
   if (!state.ref) muatReferensi();
-  if (!opd) muatAkun();
+  if (admin) muatAkun();
 }
 
 async function muatData(tambah) {
@@ -1043,7 +1478,7 @@ async function muatData(tambah) {
   } catch (e) { gagal(e); }
   state.memuat = false;
   renderKuota(); renderChips(); renderGrid(); renderPenyediaInfo();
-  if (state.role === 'Tim Konsolidasi' && state.tab === 'penyedia') muatPenyedia();
+  if (isAdmin(state.role) && state.tab === 'penyedia') muatPenyedia();
 }
 
 async function muatPenyedia() {
@@ -1054,20 +1489,44 @@ function renderKuota() {
   const r = state.ringkasan; if (!r) return;
   $('#qTotal').textContent = rp(r.total);
   const j = r.jumlah;
-  $('#qStats').innerHTML = [['Pending', 'Menunggu'], ['Revisi', 'Revisi'], ['Disetujui', 'Disetujui'], ['Ditolak', 'Ditolak']].map(d =>
-    '<div class="sbox"><div class="sn">' + j[d[0]] + '</div><div class="sl"><span class="sdot d-' + d[0] + '"></span>' + d[1] + '</div></div>').join('');
+  $('#qStats').innerHTML = [
+    ['Pending', isPokja(state.role) ? 'Menunggu Tahap 2' : 'Menunggu'],
+    ['Revisi', 'Revisi Dokumen'],
+    ['Disetujui', 'Disetujui Final'],
+    ['Ditolak', 'Ditolak / Ganti']
+  ].map(d =>
+    '<div class="sbox"><div class="sn">' + (j[d[0]] || 0) + '</div><div class="sl"><span class="sdot d-' + d[0] + '"></span>' + d[1] + '</div></div>'
+  ).join('');
 }
 
 function renderChips() {
   const j = state.ringkasan ? state.ringkasan.jumlah : { Pending: 0, Revisi: 0, Disetujui: 0, Ditolak: 0 };
   const semua = j.Pending + j.Revisi + j.Disetujui + j.Ditolak;
-  const defs = [['', 'Semua', semua], ['Pending', 'Menunggu', j.Pending], ['Revisi', 'Revisi', j.Revisi], ['Disetujui', 'Disetujui', j.Disetujui], ['Ditolak', 'Ditolak', j.Ditolak]];
-  $('#chips').innerHTML = defs.map(d => '<button type="button" class="chip' + (state.filter === d[0] ? ' on' : '') + '" data-filter="' + d[0] + '">' + d[1] + '<b>' + d[2] + '</b></button>').join('');
+  const defs = [
+    ['', 'Semua', semua],
+    ['Pending', 'Menunggu', j.Pending],
+    ['Revisi', 'Revisi', j.Revisi],
+    ['Disetujui', 'Disetujui', j.Disetujui],
+    ['Ditolak', 'Ditolak', j.Ditolak]
+  ];
+  $('#chips').innerHTML = defs.map(d =>
+    '<button type="button" class="chip' + (state.filter === d[0] ? ' on' : '') + '" data-filter="' + d[0] + '">' + d[1] + '<b>' + d[2] + '</b></button>'
+  ).join('');
 }
 
 function warna(str) { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360; return h; }
 function inisial(str) { const k = String(str).trim().split(/\s+/).filter(Boolean); return ((k[0] || '?')[0] + (k[1] ? k[1][0] : '')).toUpperCase(); }
-const pill = st => '<span class="pill st-' + esc(st) + '"><i></i>' + esc(st) + '</span>';
+
+function badgeStatus(st) {
+  const cls = (st === 'Menunggu Verifikasi Tahap 1' || st === 'Pending') ? 'st-Menunggu-Tahap-1'
+            : (st === 'Undangan Klarifikasi') ? 'st-Undangan-Klarifikasi'
+            : (st === 'Penyedia Ditolak') ? 'st-Penyedia-Ditolak'
+            : (st === 'Menunggu Verifikasi Tahap 2') ? 'st-Menunggu-Tahap-2'
+            : (st === 'Revisi Dokumen' || st === 'Revisi') ? 'st-Revisi-Dokumen'
+            : (st === 'Disetujui') ? 'st-Disetujui'
+            : 'st-Ditolak';
+  return '<span class="pill ' + cls + '"><i></i>' + esc(st) + '</span>';
+}
 
 function dokChips(p) {
   return Object.keys(JENIS_DOK).map(k => p.Dok[k]
@@ -1083,80 +1542,242 @@ function etalase(link) {
 }
 
 function catatanBox(p) {
-  if (p.Status !== 'Revisi' && p.Status !== 'Ditolak') return '';
-  const tolak = p.Status === 'Ditolak', it = p.CatatanItem || {};
+  if (p.Status !== 'Revisi' && p.Status !== 'Revisi Dokumen' && p.Status !== 'Ditolak' && p.Status !== 'Penyedia Ditolak') return '';
+  const tolak = p.Status === 'Ditolak' || p.Status === 'Penyedia Ditolak', it = p.CatatanItem || {};
   const ks = Object.keys(ITEM_TOLAK).filter(k => it[k]);
   if (!p.Catatan_Umum && !ks.length) return '<div class="cat-hint"><i class="bi bi-chat-left-text"></i> Alasan ada di Klarifikasi.</div>';
-  return '<div class="cat-box ' + (tolak ? 'tolak' : 'revisi') + '"><div class="cat-h"><i class="bi bi-exclamation-octagon"></i> ' + (tolak ? 'Alasan penolakan' : 'Perlu diperbaiki') + '</div>' +
+  return '<div class="cat-box ' + (tolak ? 'tolak' : 'revisi') + '"><div class="cat-h"><i class="bi bi-exclamation-octagon"></i> ' + (tolak ? 'Alasan penolakan / ganti penyedia' : 'Perlu diperbaiki') + '</div>' +
     (p.Catatan_Umum ? '<div class="cat-t">' + esc(p.Catatan_Umum) + '</div>' : '') +
     ks.map(k => '<div class="cat-i"><b>' + esc(ITEM_TOLAK[k]) + ':</b> ' + esc(it[k]) + '</div>').join('') + '</div>';
 }
 
+function bannerUndangan(p) {
+  if (p.Status !== 'Undangan Klarifikasi' || !p.UndanganKlarifikasi) return '';
+  const u = p.UndanganKlarifikasi;
+  return '<div class="undangan-banner">' +
+    '<div><i class="bi bi-calendar2-event-fill text-warning me-1"></i><b>Jadwal Rapat Klarifikasi:</b></div>' +
+    '<div class="mt-1">📅 ' + esc(u.tanggal) + ' | ⏰ ' + esc(u.waktu) + ' WIB</div>' +
+    '<div>📍 ' + esc(u.tempat) + '</div>' +
+    '<div class="small-note text-truncate mt-1">Agenda: ' + esc(u.agenda) + '</div>' +
+    '</div>';
+}
+
+/* Tombol Aksi Sesuai Role (OPD, Admin, Pokja) */
 function aksiKartu(p) {
   const id = esc(p.ID_Pengajuan);
-  if (state.role === 'OPD') {
-    const bisaDok = p.Status === 'Pending' || p.Status === 'Revisi';
-    return '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text"></i> Klarifikasi</button>' +
-      (bisaDok ? '<button class="btn btn-sm ' + (p.DokLengkap ? 'btn-line' : 'btn-warn') + '" data-act="dok" data-id="' + id + '"><i class="bi bi-paperclip"></i> ' + (p.DokLengkap ? 'Ganti dokumen' : 'Lengkapi dokumen') + '</button>' : '') +
-      (p.Status === 'Revisi' ? '<button class="btn btn-sm btn-main" data-act="edit" data-id="' + id + '"><i class="bi bi-pencil-square"></i> Perbaiki</button>' : '');
+  const role = state.role;
+
+  // 1. Role OPD
+  if (isOpd(role)) {
+    let html = '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text me-1"></i>Klarifikasi</button>';
+    
+    // Fitur 6: Ganti Penyedia ketika ditolak verifikasi Tahap 1
+    if (p.Status === 'Penyedia Ditolak') {
+      html += '<button class="btn btn-sm btn-warn" data-act="gantipen" data-id="' + id + '"><i class="bi bi-arrow-repeat me-1"></i>Ganti Penyedia</button>';
+    }
+
+    // Bisa ganti dokumen saat status awal atau revisi dokumen
+    const bisaDok = p.Status === 'Pending' || p.Status === 'Menunggu Verifikasi Tahap 1' || p.Status === 'Revisi Dokumen' || p.Status === 'Revisi';
+    if (bisaDok) {
+      html += '<button class="btn btn-sm ' + (p.DokLengkap ? 'btn-line' : 'btn-warn') + '" data-act="dok" data-id="' + id + '"><i class="bi bi-paperclip me-1"></i>' + (p.DokLengkap ? 'Ganti dokumen' : 'Lengkapi dokumen') + '</button>';
+    }
+
+    if (p.Status === 'Revisi' || p.Status === 'Revisi Dokumen') {
+      html += '<button class="btn btn-sm btn-main" data-act="edit" data-id="' + id + '"><i class="bi bi-pencil-square me-1"></i>Perbaiki</button>';
+    }
+    return html;
   }
-  const dis = s => p.Status === s ? 'disabled' : '';
-  const setuju = !p.DokLengkap ? 'disabled title="Dokumen belum lengkap"' : dis('Disetujui');
-  return '<button class="btn btn-sm btn-ok" data-act="Disetujui" data-id="' + id + '" ' + setuju + '>Setujui</button>' +
-    '<button class="btn btn-sm btn-line" data-act="Revisi" data-id="' + id + '" ' + dis('Revisi') + '>Minta revisi</button>' +
-    '<button class="btn btn-sm btn-quiet" data-act="Ditolak" data-id="' + id + '" ' + dis('Ditolak') + '>Tolak</button>' +
-    '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text"></i></button>';
+
+  // 2. Role Admin (Verifikasi Tahap 1: Penyedia & Evaluasi Batas 15 Miliar)
+  if (isAdmin(role)) {
+    const isTahap1 = p.Status === 'Pending' || p.Status === 'Menunggu Verifikasi Tahap 1' || p.Status === 'Undangan Klarifikasi';
+    return (isTahap1
+      ? '<button class="btn btn-sm btn-ok" data-act="Tahap1_Setuju" data-id="' + id + '"><i class="bi bi-check2-circle me-1"></i>Lolos Tahap 1</button>' +
+        '<button class="btn btn-sm btn-no" data-act="Tahap1_Tolak" data-id="' + id + '" title="Tolak penyedia agar OPD mengganti penyedia"><i class="bi bi-x-circle me-1"></i>Tolak Penyedia</button>'
+      : '') +
+      '<button class="btn btn-sm btn-line text-warning" data-act="undangklarif" data-id="' + id + '" title="Kirim Undangan Klarifikasi Rapat"><i class="bi bi-envelope-paper me-1"></i>Undang</button>' +
+      '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text"></i></button>';
+  }
+
+  // 3. Role Pokja (Verifikasi Tahap 2: Dokumen Persiapan KAK, Kertas Kerja, HPS)
+  if (isPokja(role)) {
+    const dis = !p.DokLengkap ? 'disabled title="Dokumen belum lengkap"' : '';
+    const isTahap2 = p.Status === 'Menunggu Verifikasi Tahap 2' || p.Status === 'Revisi Dokumen' || p.Status === 'Lolos Tahap 1';
+    return (isTahap2
+      ? '<button class="btn btn-sm btn-ok" data-act="Tahap2_Setuju" data-id="' + id + '" ' + dis + '><i class="bi bi-check-all me-1"></i>Setujui Final</button>' +
+        '<button class="btn btn-sm btn-line" data-act="Tahap2_Revisi" data-id="' + id + '"><i class="bi bi-pencil me-1"></i>Minta Revisi</button>' +
+        '<button class="btn btn-sm btn-quiet" data-act="Tahap2_Tolak" data-id="' + id + '"><i class="bi bi-trash me-1"></i>Tolak</button>'
+      : '') +
+      '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text"></i></button>';
+  }
+
+  return '';
 }
 
 function kartu(p) {
-  const tim = state.role !== 'OPD';
+  const tim = !isOpd(state.role);
   const sumber = p.OPD_Pengaju;
   const kode = singkatan(sumber) || inisial(sumber);
+  const nonUmkk = isNonUmkk(p.Calon_Penyedia);
+
   return '<article class="pcard">' +
     '<div class="poster" style="--h:' + warna(sumber) + '">' +
-      '<div class="po-top">' + pill(p.Status) + '<span class="po-tag">' + p.Jumlah_Tenaga + ' orang</span></div>' +
+      '<div class="po-top">' + badgeStatus(p.Status) + '<span class="po-tag">' + p.Jumlah_Tenaga + ' orang</span></div>' +
       '<div class="po-ini">' + esc(kode) + '</div>' +
       '<div class="po-hps">' + rp(p.Nilai_HPS) + '</div>' +
     '</div>' +
     '<div class="pbody">' +
       (tim ? '<div class="p-opd">' + esc(p.OPD_Pengaju) + '</div>' : '') +
       '<h3 class="p-title">' + esc(p.Nama_Paket) + '</h3>' +
-      '<div class="p-meta">Penyedia: ' + esc(p.Calon_Penyedia) + '</div>' +
+      '<div class="p-meta">Penyedia: <b>' + esc(p.Calon_Penyedia) + '</b> ' +
+        (nonUmkk ? '<span class="badge bg-primary-subtle text-primary ms-1">Non UMKK</span>' : '<span class="badge bg-warning-subtle text-warning ms-1">UMKK</span>') +
+      '</div>' +
       '<div class="p-meta">' + esc(p.Jenis_Tenaga_Alih_Daya) + '</div>' +
       '<div class="p-meta faint">' + esc(p.ID_Pengajuan) + ', ' + esc(p.Timestamp) + '</div>' +
+      bannerUndangan(p) +
       '<div class="dchips">' + dokChips(p) + '</div>' + etalase(p.Link_Katalog) + catatanBox(p) +
       '<div class="p-acts">' + aksiKartu(p) + '</div>' +
     '</div></article>';
 }
 
+/* Fitur 4: Render Grid Pengajuan - Dibuat Per OPD untuk Admin & Pokja */
 function renderGrid() {
   const g = $('#grid');
-  if (state.memuat && !state.list.length) { g.innerHTML = '<div class="sk"></div>'.repeat(6); $('#btnMore').style.display = 'none'; return; }
+  if (state.memuat && !state.list.length) {
+    g.innerHTML = '<div class="sk"></div>'.repeat(4);
+    $('#btnMore').style.display = 'none';
+    return;
+  }
+
+  const opdUser = isOpd(state.role);
   let html = '';
-  const opd = state.role === 'OPD';
-  if (opd && !state.filter && !state.cari) html += '<button class="add-card" data-act="baru"><i class="bi bi-plus-circle"></i>Ajukan paket baru</button>';
-  html += state.list.map(kartu).join('');
-  if (!state.list.length) html += '<div class="empty"><i class="bi bi-inbox"></i>Tidak ada pengajuan.</div>';
-  g.innerHTML = html;
+
+  // Untuk OPD: Tampilan kartu langsung
+  if (opdUser) {
+    html = '<div class="grid">';
+    if (!state.filter && !state.cari) {
+      html += '<button class="add-card" data-act="baru"><i class="bi bi-plus-circle"></i>Ajukan paket baru</button>';
+    }
+    html += state.list.map(kartu).join('');
+    if (!state.list.length) html += '<div class="empty"><i class="bi bi-inbox"></i>Belum ada pengajuan dari OPD Anda.</div>';
+    html += '</div>';
+    g.innerHTML = html;
+  } else {
+    // Untuk Admin & Pokja: DIKELOMPOKKAN PER OPD (Fitur 4)
+    if (!state.list.length) {
+      g.innerHTML = '<div class="empty"><i class="bi bi-inbox"></i>Tidak ada pengajuan ditemukan.</div>';
+      return;
+    }
+
+    const petaOpd = {};
+    state.list.forEach(item => {
+      const namaOpd = item.OPD_Pengaju || 'Tanpa OPD';
+      if (!petaOpd[namaOpd]) {
+        petaOpd[namaOpd] = {
+          nama: namaOpd,
+          totalHps: 0,
+          items: []
+        };
+      }
+      petaOpd[namaOpd].totalHps += Number(item.Nilai_HPS || 0);
+      petaOpd[namaOpd].items.push(item);
+    });
+
+    const daftarOpd = Object.values(petaOpd);
+
+    html = daftarOpd.map(gOpd => {
+      const safeId = 'opd_' + gOpd.nama.replace(/[^a-zA-Z0-9]/g, '_');
+      const isExpanded = state.expandedOpd[safeId] !== false; // default buka jika sedang cari / filter
+      const jmlPaket = gOpd.items.length;
+      const inis = inisial(gOpd.nama);
+
+      // Ringkasan status
+      const hitung = { Tahap1: 0, Undangan: 0, Tahap2: 0, Selesai: 0 };
+      gOpd.items.forEach(it => {
+        if (it.Status === 'Menunggu Verifikasi Tahap 1' || it.Status === 'Pending') hitung.Tahap1++;
+        else if (it.Status === 'Undangan Klarifikasi') hitung.Undangan++;
+        else if (it.Status === 'Menunggu Verifikasi Tahap 2' || it.Status === 'Revisi Dokumen') hitung.Tahap2++;
+        else if (it.Status === 'Disetujui') hitung.Selesai++;
+      });
+
+      const cardsHtml = gOpd.items.map(kartu).join('');
+
+      return '<div class="opd-group-card" id="' + safeId + '">' +
+        '<div class="opd-header" data-toggle-opd="' + safeId + '">' +
+          '<div class="opd-title-wrap">' +
+            '<div class="opd-badge-avatar">' + esc(inis) + '</div>' +
+            '<div>' +
+              '<div class="opd-name">' + esc(gOpd.nama) + '</div>' +
+              '<div class="opd-stats-sub">' + jmlPaket + ' Paket Pengajuan &bull; Total HPS: <b class="text-warning">' + rp(gOpd.totalHps) + '</b></div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="d-flex align-items-center gap-2">' +
+            (hitung.Tahap1 ? '<span class="badge bg-warning-subtle text-warning border border-warning-subtle">' + hitung.Tahap1 + ' Tahap 1</span>' : '') +
+            (hitung.Undangan ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle">' + hitung.Undangan + ' Undangan</span>' : '') +
+            (hitung.Tahap2 ? '<span class="badge bg-info-subtle text-info border border-info-subtle">' + hitung.Tahap2 + ' Tahap 2</span>' : '') +
+            (hitung.Selesai ? '<span class="badge bg-success-subtle text-success border border-success-subtle">' + hitung.Selesai + ' Selesai</span>' : '') +
+            '<i class="bi bi-chevron-' + (isExpanded ? 'up' : 'down') + ' ms-2 text-muted opd-chevron"></i>' +
+          '</div>' +
+        '</div>' +
+        '<div class="opd-content" style="display:' + (isExpanded ? '' : 'none') + '">' +
+          '<div class="grid">' + cardsHtml + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    g.innerHTML = html;
+  }
+
   $('#listCount').textContent = state.total ? 'Menampilkan ' + state.list.length + ' dari ' + state.total + ' pengajuan' : '';
   const sisa = state.total - state.list.length;
   $('#btnMore').style.display = sisa > 0 ? '' : 'none';
   $('#btnMore').textContent = 'Tampilkan lebih banyak (' + sisa + ' lagi)';
 }
 
+// Toggle Group OPD
+document.addEventListener('click', e => {
+  const header = e.target.closest('.opd-header[data-toggle-opd]');
+  if (!header) return;
+  const opdId = header.dataset.toggleOpd;
+  const card = $('#' + opdId);
+  if (!card) return;
+  const content = card.querySelector('.opd-content');
+  const chevron = card.querySelector('.opd-chevron');
+  const nowShow = content.style.display !== 'none';
+  content.style.display = nowShow ? 'none' : '';
+  if (chevron) chevron.className = 'bi bi-chevron-' + (nowShow ? 'down' : 'up') + ' ms-2 text-muted opd-chevron';
+  state.expandedOpd[opdId] = !nowShow;
+});
+
 function renderTab() {
-  const tim = state.role === 'Tim Konsolidasi';
+  const admin = isAdmin(state.role);
+  const pokja = isPokja(state.role);
   const tabs = $('#tabs');
-  tabs.style.display = tim ? '' : 'none';
-  if (!tim) { $('#paneList').style.display = ''; $('#panePen').style.display = 'none'; $('#paneAkun').style.display = 'none'; return; }
+  tabs.style.display = (admin || pokja) ? '' : 'none';
+  
+  if (!admin && !pokja) {
+    $('#paneList').style.display = '';
+    $('#panePen').style.display = 'none';
+    $('#paneAkun').style.display = 'none';
+    return;
+  }
+
   const t = state.tab;
   const menunggu = state.akun ? state.akun.filter(a => a.status === 'Menunggu').length : 0;
-  tabs.innerHTML = '<button type="button" class="tab' + (t === 'pengajuan' ? ' on' : '') + '" data-tab="pengajuan">Pengajuan</button>' +
-    '<button type="button" class="tab' + (t === 'penyedia' ? ' on' : '') + '" data-tab="penyedia">Akumulasi per penyedia</button>' +
-    '<button type="button" class="tab' + (t === 'akun' ? ' on' : '') + '" data-tab="akun">Akun OPD' + (menunggu ? ' (' + menunggu + ')' : '') + '</button>';
-  $('#paneList').style.display = t === 'pengajuan' ? '' : 'none';
-  $('#panePen').style.display = t === 'penyedia' ? '' : 'none';
-  $('#paneAkun').style.display = t === 'akun' ? '' : 'none';
+
+  if (admin) {
+    tabs.innerHTML = '<button type="button" class="tab' + (t === 'pengajuan' ? ' on' : '') + '" data-tab="pengajuan">Pengajuan per OPD</button>' +
+      '<button type="button" class="tab' + (t === 'penyedia' ? ' on' : '') + '" data-tab="penyedia">Akumulasi Penyedia (UMKK & Non UMKK)</button>' +
+      '<button type="button" class="tab' + (t === 'akun' ? ' on' : '') + '" data-tab="akun">Kelola Pengguna' + (menunggu ? ' (' + menunggu + ')' : '') + '</button>';
+    $('#paneList').style.display = t === 'pengajuan' ? '' : 'none';
+    $('#panePen').style.display = t === 'penyedia' ? '' : 'none';
+    $('#paneAkun').style.display = t === 'akun' ? '' : 'none';
+  } else if (pokja) {
+    tabs.innerHTML = '<button type="button" class="tab' + (t === 'pengajuan' ? ' on' : '') + '" data-tab="pengajuan">Verifikasi Dokumen (Tahap 2)</button>';
+    $('#paneList').style.display = '';
+    $('#panePen').style.display = 'none';
+    $('#paneAkun').style.display = 'none';
+  }
 }
 
 async function muatAkun() {
@@ -1164,16 +1785,22 @@ async function muatAkun() {
 }
 function renderAkun() {
   const rows = state.akun || [];
-  if (!rows.length) { $('#tbodyAkun').innerHTML = '<tr><td colspan="4"><div class="empty">Belum ada akun OPD.</div></td></tr>'; return; }
+  if (!rows.length) { $('#tbodyAkun').innerHTML = '<tr><td colspan="6"><div class="empty">Belum ada akun terdaftar.</div></td></tr>'; return; }
   const kelas = { Menunggu: 'st-Pending', Aktif: 'st-Disetujui', Nonaktif: 'st-Ditolak' };
   const tmb = (u, st, teks, k) => '<button class="btn btn-sm ' + k + '" data-act="akun" data-user="' + esc(u) + '" data-status="' + st + '">' + teks + '</button>';
+  
   $('#tbodyAkun').innerHTML = rows.map(a => {
     const aksi = a.status === 'Menunggu' ? tmb(a.username, 'Aktif', 'Setujui', 'btn-ok') + ' ' + tmb(a.username, 'Nonaktif', 'Tolak', 'btn-quiet')
                : a.status === 'Aktif' ? tmb(a.username, 'Nonaktif', 'Nonaktifkan', 'btn-quiet')
                : tmb(a.username, 'Aktif', 'Aktifkan', 'btn-line');
-    return '<tr><td><div class="opd">' + esc(a.satker) + '</div></td><td>' + esc(a.username) + '</td>' +
+    return '<tr>' +
+      '<td><div class="opd">' + esc(a.satker) + '</div></td>' +
+      '<td>' + esc(a.username) + '</td>' +
+      '<td class="small text-muted">' + (a.email ? esc(a.email) : '-') + '</td>' +
+      '<td><span class="badge bg-secondary-subtle text-secondary">' + esc(a.role) + '</span></td>' +
       '<td><span class="pill ' + (kelas[a.status] || 'st-Pending') + '"><i></i>' + esc(a.status) + '</span></td>' +
-      '<td class="text-end">' + aksi + '</td></tr>';
+      '<td class="text-end">' + aksi + '</td>' +
+    '</tr>';
   }).join('');
 }
 async function ubahAkun(username, status, btn) {
@@ -1186,6 +1813,42 @@ async function ubahAkun(username, status, btn) {
   finally { btn.disabled = false; }
 }
 
+// Admin Buat Akun Baru Langsung
+$('#btnBukaModalBuatAkun').addEventListener('click', () => {
+  $('#baMsg').style.display = 'none';
+  $('#baSatker').value = '';
+  $('#baEmail').value = '';
+  $('#baUser').value = '';
+  $('#baPass').value = '';
+  bootstrap.Modal.getOrCreateInstance($('#modalBuatAkun')).show();
+});
+
+$('#btnSimpanAkunBaru').addEventListener('click', async () => {
+  const role = $('#baRole').value;
+  const satker = $('#baSatker').value.trim();
+  const email = $('#baEmail').value.trim();
+  const user = $('#baUser').value.trim();
+  const pass = $('#baPass').value;
+  const box = $('#baMsg');
+
+  if (!satker || !user || !pass || pass.length < 6) {
+    box.className = 'alert py-2 small alert-danger';
+    box.textContent = 'Lengkapi semua field (password minimal 6 karakter).';
+    box.style.display = '';
+    return;
+  }
+
+  const btn = $('#btnSimpanAkunBaru'); busy(btn, true, 'Menyimpan');
+  try {
+    const r = await api('buatAkunAdmin', satker, user, email, pass, role);
+    if (!r.ok) { box.className = 'alert py-2 small alert-danger'; box.textContent = r.message; box.style.display = ''; return; }
+    bootstrap.Modal.getOrCreateInstance($('#modalBuatAkun')).hide();
+    toast(r.message, 'success');
+    await muatAkun();
+  } catch (err) { gagal(err); }
+  finally { busy(btn, false); }
+});
+
 function miniRuler(base, tambah) {
   const total = base + tambah;
   const pLama = Math.min(base / LIMIT * 100, 100);
@@ -1196,16 +1859,31 @@ function miniRuler(base, tambah) {
 
 function renderPenyedia() {
   const rows = state.penyedia || [];
-  $('#penNote').textContent = 'Akumulasi HPS tiap penyedia dari pengajuan yang belum ditolak. Batas Rp 15 miliar per penyedia.';
-  if (!rows.length) { $('#tbodyPen').innerHTML = '<tr><td colspan="4"><div class="empty">Belum ada penyedia.</div></td></tr>'; return; }
+  $('#penNote').textContent = 'Penyedia UMKK memiliki batas maksimal akumulasi Rp 15 Miliar. Penyedia Non UMKK diizinkan lebih dari Rp 15 Miliar.';
+  if (!rows.length) { $('#tbodyPen').innerHTML = '<tr><td colspan="5"><div class="empty">Belum ada penyedia.</div></td></tr>'; return; }
+  
   $('#tbodyPen').innerHTML = rows.map((v, i) => {
+    const nonUmkk = v.isNonUmkk;
     const pct = v.total / LIMIT * 100;
-    const st = v.total > LIMIT ? '<span class="pill st-Ditolak"><i></i>Melebihi batas</span>'
-             : pct >= 80 ? '<span class="pill st-Pending"><i></i>Mendekati batas</span>'
-             : '<span class="pill st-Disetujui"><i></i>Di bawah batas</span>';
-    return '<tr class="klik" data-pen="' + i + '"><td><div class="opd">' + esc(v.nama) + '</div><div class="small-note">' + v.jumlah + ' pengajuan</div></td>' +
-      '<td style="min-width:240px">' + miniRuler(v.total, 0) + '<div class="mini-pct">' + pct.toFixed(1).replace('.', ',') + '%</div></td>' +
-      '<td class="num">' + rp(v.total) + '</td><td>' + st + '</td></tr>';
+    
+    // Penanda status batas untuk UMKK vs Non UMKK
+    let st = '';
+    if (nonUmkk) {
+      st = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-check-circle me-1"></i>Bebas Kuota 15M</span>';
+    } else {
+      st = v.total > LIMIT ? '<span class="pill st-Ditolak"><i></i>Melebihi Batas 15M</span>'
+         : pct >= 80 ? '<span class="pill st-Pending"><i></i>Mendekati Batas 15M</span>'
+         : '<span class="pill st-Disetujui"><i></i>Di Bawah Batas</span>';
+    }
+
+    return '<tr class="klik" data-pen="' + i + '">' +
+      '<td><div class="opd">' + esc(v.nama) + '</div><div class="small-note">' + v.jumlah + ' pengajuan</div></td>' +
+      '<td>' + (nonUmkk ? '<span class="badge bg-primary-subtle text-primary">Non UMKK</span>' : '<span class="badge bg-warning-subtle text-warning">UMKK</span>') + '</td>' +
+      '<td style="min-width:240px">' + 
+        (nonUmkk ? '<div class="small text-muted">Akumulasi HPS berjalan:</div>' : miniRuler(v.total, 0) + '<div class="mini-pct">' + pct.toFixed(1).replace('.', ',') + '% dari 15 M</div>') +
+      '</td>' +
+      '<td class="num">' + rp(v.total) + '</td><td>' + st + '</td>' +
+    '</tr>';
   }).join('');
 }
 
@@ -1223,16 +1901,111 @@ document.addEventListener('click', e => {
   if (chip) { state.filter = chip.dataset.filter; renderChips(); muatData(); return; }
   const trp = e.target.closest('tr[data-pen]');
   if (trp) return bukaDetailPen(Number(trp.dataset.pen));
+  
   const b = e.target.closest('button[data-act]'); if (!b) return;
   const id = b.dataset.id, act = b.dataset.act;
   if (act === 'akun') return ubahAkun(b.dataset.user, b.dataset.status, b);
   if (act === 'baru') return bukaForm();
   if (act === 'tabpen') { state.tab = 'penyedia'; renderTab(); muatPenyedia(); return; }
+  if (act === 'refresh') { return muatData(); }
   if (act === 'klarif') return bukaKlarifikasi(id);
   if (act === 'edit') return mulaiEdit(id);
   if (act === 'dok') return bukaDok(id);
   if (act === 'unduh') return unduh(id, b.dataset.jenis);
-  if (AKSI[act]) return bukaAksi(id, act);
+  if (act === 'gantipen') return bukaGantiPenyedia(id);
+  if (act === 'undangklarif') return bukaModalUndangan(id);
+  
+  // Aksi Verifikasi Tahap 1 & Tahap 2
+  if (act === 'Tahap1_Setuju') return bukaAksi(id, 'Menunggu Verifikasi Tahap 2', 'Setujui Verifikasi Tahap 1 (Lanjut ke Pokja)');
+  if (act === 'Tahap1_Tolak') return bukaAksi(id, 'Penyedia Ditolak', 'Tolak Penyedia (Minta OPD Ganti Penyedia)');
+  if (act === 'Tahap2_Setuju') return bukaAksi(id, 'Disetujui', 'Setujui Dokumen Persiapan Final');
+  if (act === 'Tahap2_Revisi') return bukaAksi(id, 'Revisi Dokumen', 'Minta Revisi Dokumen Persiapan');
+  if (act === 'Tahap2_Tolak') return bukaAksi(id, 'Ditolak', 'Tolak Dokumen Persiapan');
+});
+
+/* Modal Ganti Penyedia (OPD) */
+let gantiPenId = null;
+function bukaGantiPenyedia(id) {
+  const p = state.list.find(x => x.ID_Pengajuan === id);
+  if (!p) return;
+  gantiPenId = id;
+  $('#gpPaket').textContent = p.Nama_Paket;
+  $('#gpPenyediaLama').textContent = p.Calon_Penyedia;
+  $('#gpPenyediaBaru').value = '';
+  $('#gpHpsBaru').value = Number(p.Nilai_HPS).toLocaleString('id-ID');
+  $('#gpCatatan').value = '';
+  $('#gpBadgeKategori').style.display = 'none';
+  bootstrap.Modal.getOrCreateInstance($('#modalGantiPen')).show();
+}
+
+$('#btnSimpanGantiPen').addEventListener('click', async () => {
+  if (!gantiPenId) return;
+  const pBaru = $('#gpPenyediaBaru').value.trim();
+  if (!pBaru) { toast('Ketik atau pilih calon penyedia baru.', 'warning'); $('#gpPenyediaBaru').focus(); return; }
+  const hpsBaru = parseInt($('#gpHpsBaru').value.replace(/\D/g, ''), 10) || 0;
+  const catatan = $('#gpCatatan').value.trim();
+
+  const btn = $('#btnSimpanGantiPen'); busy(btn, true, 'Menyimpan');
+  try {
+    const res = await call('gantiPenyediaOpd', gantiPenId, pBaru, hpsBaru, catatan);
+    bootstrap.Modal.getOrCreateInstance($('#modalGantiPen')).hide();
+    toast(res.message, 'success');
+    await muatData();
+  } catch (err) { gagal(err); }
+  finally { busy(btn, false); }
+});
+
+/* Modal Undangan Klarifikasi (Admin) */
+let undanganId = null;
+function bukaModalUndangan(id) {
+  const p = state.list.find(x => x.ID_Pengajuan === id);
+  if (!p) return;
+  undanganId = id;
+  $('#ukPaket').textContent = p.ID_Pengajuan + ' - ' + p.Nama_Paket;
+  $('#ukPenyediaInfo').innerHTML = 'Penyedia: <b>' + esc(p.Calon_Penyedia) + '</b> (' + rp(p.Nilai_HPS) + ')';
+  
+  // Tanggal default besok
+  const besok = new Date(); besok.setDate(besok.getDate() + 1);
+  $('#ukTgl').value = besok.toISOString().split('T')[0];
+  $('#ukJam').value = '09:00';
+  $('#ukTempat').value = 'Ruang Rapat Bagian Pengadaan Barang dan Jasa Setda Kota Surakarta';
+  $('#ukAgenda').value = 'Klarifikasi dan negosiasi teknis pengajuan penyedia tenaga alih daya';
+  $('#ukCatatan').value = '';
+  
+  bootstrap.Modal.getOrCreateInstance($('#modalUndanganKlarif')).show();
+}
+
+$('#btnKirimUndangan').addEventListener('click', async () => {
+  if (!undanganId) return;
+  const tgl = $('#ukTgl').value;
+  const jam = $('#ukJam').value;
+  const tempat = $('#ukTempat').value.trim();
+  const agenda = $('#ukAgenda').value.trim();
+  const catatan = $('#ukCatatan').value.trim();
+
+  if (!tgl || !jam || !tempat || !agenda) {
+    toast('Lengkapi tanggal, jam, tempat, dan agenda klarifikasi.', 'warning');
+    return;
+  }
+
+  const btn = $('#btnKirimUndangan'); busy(btn, true, 'Mengirim');
+  try {
+    const dataUndangan = {
+      nomor: 'UND/' + undanganId + '/' + Date.now().toString().slice(-4),
+      tanggal: tgl,
+      waktu: jam,
+      tempat: tempat,
+      agenda: agenda,
+      catatan: catatan,
+      dibuat_oleh: state.username,
+      dibuat_pada: new Date().toISOString()
+    };
+    const res = await call('kirimUndanganKlarifikasi', undanganId, dataUndangan);
+    bootstrap.Modal.getOrCreateInstance($('#modalUndanganKlarif')).hide();
+    toast(res.message, 'success');
+    await muatData();
+  } catch (err) { gagal(err); }
+  finally { busy(btn, false); }
 });
 
 function pickerHtml(k, pre, sekarang) {
@@ -1311,27 +2084,18 @@ const getNilai = () => parseInt(fHps.value.replace(/\D/g, ''), 10) || 0;
 fHps.addEventListener('input', () => {
   const d = fHps.value.replace(/\D/g, '').slice(0, 13);
   fHps.value = d ? Number(d).toLocaleString('id-ID') : '';
-  if (state.role === 'Tim Konsolidasi') renderPenyediaInfo();
-});
-
-$('#fPenyedia').addEventListener('change', () => {
-  const nama = $('#fPenyedia').value.trim();
-  if (!nama || state.role !== 'Tim Konsolidasi') {
-    state.pen = { nama: '', total: 0, jumlah: 0, ada: false };
-    return renderPenyediaInfo();
-  }
-  cekPenyedia(nama);
+  if (isAdmin(state.role)) renderPenyediaInfo();
 });
 
 async function cekPenyedia(nama) {
-  if (state.role !== 'Tim Konsolidasi') {
-    state.pen = { nama: '', total: 0, jumlah: 0, ada: false };
+  if (!isAdmin(state.role)) {
+    state.pen = { nama: '', total: 0, jumlah: 0, ada: false, isNonUmkk: false };
     renderPenyediaInfo();
     return;
   }
   try {
     const r = await call('cekPenyedia', nama, state.editingId);
-    state.pen = { nama: nama, total: r.total, jumlah: r.jumlah, ada: true };
+    state.pen = { nama: nama, total: r.total, jumlah: r.jumlah, ada: true, isNonUmkk: r.isNonUmkk };
     renderPenyediaInfo();
   } catch (e) { gagal(e); }
 }
@@ -1339,8 +2103,8 @@ async function cekPenyedia(nama) {
 function renderPenyediaInfo() {
   const box = $('#penyediaInfo');
   if (!box) return;
-  // Sisa anggaran dan batas Rp 15 Miliar HANYA untuk Tim Konsolidasi, tidak ada di tampilan OPD
-  if (state.role !== 'Tim Konsolidasi') {
+  // Sisa anggaran dan batas Rp 15 Miliar HANYA untuk Admin
+  if (!isAdmin(state.role)) {
     box.className = 'pen-info';
     box.innerHTML = '';
     box.style.display = 'none';
@@ -1349,11 +2113,18 @@ function renderPenyediaInfo() {
   box.style.display = '';
   const p = state.pen;
   if (!p.ada) { box.className = 'pen-info'; box.innerHTML = ''; return; }
+  
+  if (p.isNonUmkk) {
+    box.className = 'pen-info show';
+    box.innerHTML = '<div class="alert alert-info py-2 small mb-0"><i class="bi bi-info-circle me-1"></i>Penyedia ini terdaftar sebagai <b>Non UMKK</b>. Pengajuan dapat bernilai lebih dari Rp 15 Miliar. Total akumulasi berjalan: ' + rp(p.total) + '</div>';
+    return;
+  }
+
   const nilai = getNilai(), setelah = p.total + nilai, over = setelah > LIMIT;
   const awal = p.jumlah ? 'Sudah ada ' + p.jumlah + ' pengajuan untuk penyedia ini (' + rp(p.total) + ').' : 'Belum ada pengajuan lain untuk penyedia ini.';
   const akhir = nilai > 0
     ? (over ? '<b>Batas Rp 15 miliar terlewati!</b> Akumulasi menjadi ' + rp(setelah) : 'Setelah pengajuan ini: ' + rp(setelah) + ', sisa ' + rp(LIMIT - setelah))
-    : 'Batas akumulasi per penyedia: Rp 15 miliar.';
+    : 'Batas akumulasi per penyedia UMKK: Rp 15 miliar.';
   box.className = 'pen-info show' + (over ? ' over' : '');
   box.innerHTML = miniRuler(p.total, nilai) + '<div class="pen-text">' + awal + '<br>' + akhir + '</div>';
 }
@@ -1363,10 +2134,11 @@ const dataForm = () => ({ link: $('#fLink').value.trim(), nama: $('#fNama').valu
 function resetForm() {
   $('#formPengajuan').reset();
   $('#pickList').innerHTML = Object.keys(JENIS_DOK).map(k => '<div class="col-lg-4">' + pickerHtml(k, 'f') + '</div>').join('');
-  state.editingId = null; state.pen = { nama: '', total: 0, jumlah: 0, ada: false };
+  state.editingId = null; state.pen = { nama: '', total: 0, jumlah: 0, ada: false, isNonUmkk: false };
   $('#panelForm').classList.remove('editing');
   $('#btnKirim').textContent = 'Kirim pengajuan';
   $('#fileSection').style.display = '';
+  $('#badgeKategoriPenyedia').style.display = 'none';
   renderPenyediaInfo();
 }
 function bukaForm() { if (!state.ref) muatReferensi(); resetForm(); $('#panelForm').style.display = ''; $('#panelForm').scrollIntoView({ behavior: 'smooth' }); $('#fNama').focus(); }
@@ -1377,15 +2149,18 @@ function mulaiEdit(id) {
   const p = state.list.find(x => x.ID_Pengajuan === id); if (!p) return;
   resetForm();
   state.editingId = id;
-  $('#fNama').value = p.Nama_Paket; setPilihan($('#fPenyedia'), p.Calon_Penyedia);
+  $('#fNama').value = p.Nama_Paket;
+  $('#fPenyedia').value = p.Calon_Penyedia;
+  updateBadgePenyedia(p.Calon_Penyedia, $('#badgeKategoriPenyedia'));
   fHps.value = Number(p.Nilai_HPS).toLocaleString('id-ID');
-  setPilihan($('#fJenis'), p.Jenis_Tenaga_Alih_Daya); $('#fJumlah').value = p.Jumlah_Tenaga;
+  $('#fJenis').value = p.Jenis_Tenaga_Alih_Daya;
+  $('#fJumlah').value = p.Jumlah_Tenaga;
   $('#fLink').value = p.Link_Katalog || '';
   $('#panelForm').classList.add('editing');
-  $('#btnKirim').textContent = 'Kirim ulang';
+  $('#btnKirim').textContent = 'Kirim ulang revisi';
   $('#fileSection').style.display = 'none';
   $('#panelForm').style.display = '';
-  cekPenyedia(p.Calon_Penyedia);
+  if (isAdmin(state.role)) cekPenyedia(p.Calon_Penyedia);
   $('#panelForm').scrollIntoView({ behavior: 'smooth' });
 }
 $('#formPengajuan').addEventListener('submit', e => { e.preventDefault(); kirimForm(false); });
@@ -1401,11 +2176,15 @@ async function kirimForm(konfirmasi) {
   try {
     const d = dataForm();
     const res = baru ? await call('submitPengajuan', d, !!konfirmasi) : await call('revisiPengajuan', state.editingId, d, !!konfirmasi);
-    if (!res.ok && res.code === 'LIMIT') { tampilLimit(res); return; }
     if (!res.ok) { toast(res.message, 'danger'); return; }
     if (baru) {
-      await simpanDokumen(res.id, sumber, btn);
-      toast('Pengajuan ' + res.id + ' dan dokumen berhasil dikirim.', 'success');
+      try {
+        await simpanDokumen(res.id, sumber, btn);
+        toast('Pengajuan ' + res.id + ' dan dokumen berhasil dikirim.', 'success');
+      } catch (dokErr) {
+        console.error('Gagal simpan dokumen:', dokErr);
+        toast('Pengajuan ' + res.id + ' berhasil dibuat, namun berkas gagal diunggah: ' + dokErr.message, 'warning');
+      }
     } else {
       toast(res.message, 'success');
     }
@@ -1414,18 +2193,6 @@ async function kirimForm(konfirmasi) {
   } catch (err) { gagal(err); }
   finally { busy(btn, false); }
 }
-
-function tampilLimit(r) {
-  $('#limitIntro').innerHTML = 'Akumulasi HPS untuk penyedia <b>' + esc(r.penyedia) + '</b> melebihi batas Rp 15 miliar.';
-  $('#limitRows').innerHTML =
-    '<div>HPS saat ini</div><div class="text-end">' + rp(r.total) + '</div>' +
-    '<div>Nilai HPS ini</div><div class="text-end">' + rp(r.nilaiBaru) + '</div>' +
-    '<div>Batas per penyedia</div><div class="text-end">' + rp(r.limit) + '</div>' +
-    '<div class="tot bad">Akumulasi</div><div class="tot bad text-end">' + rp(r.setelah) + '</div>' +
-    '<div class="bad">Kelebihan</div><div class="bad text-end">' + rp(r.lebih) + '</div>';
-  bootstrap.Modal.getOrCreateInstance($('#modalLimit')).show();
-}
-$('#btnTetapAjukan').addEventListener('click', () => { bootstrap.Modal.getOrCreateInstance($('#modalLimit')).hide(); kirimForm(true); });
 
 async function bukaDetailPen(i) {
   const v = (state.penyedia || [])[i]; if (!v) return;
@@ -1439,14 +2206,18 @@ async function bukaDetailPen(i) {
 }
 
 function htmlDetailPen(r) {
+  const nonUmkk = r.isNonUmkk;
   const pct = r.total / LIMIT * 100, sisa = LIMIT - r.total;
   const ringkas = '<div class="dp-sum">' +
-    '<div><div class="k">Total HPS</div><div class="v">' + rp(r.total) + '</div></div>' +
-    '<div><div class="k">Pengajuan</div><div class="v">' + r.jumlah + '</div></div>' +
-    '<div><div class="k">' + (sisa >= 0 ? 'Sisa dari batas' : 'Melebihi batas') + '</div><div class="v">' + rp(Math.abs(sisa)) + '</div></div></div>' +
-    miniRuler(r.total, 0) + '<div class="mini-pct mb-3">' + pct.toFixed(1).replace('.', ',') + '%</div>';
+    '<div><div class="k">Kategori</div><div class="v">' + (nonUmkk ? '<span class="badge bg-primary-subtle text-primary">Non UMKK</span>' : '<span class="badge bg-warning-subtle text-warning">UMKK</span>') + '</div></div>' +
+    '<div><div class="k">Total HPS Berjalan</div><div class="v">' + rp(r.total) + '</div></div>' +
+    '<div><div class="k">Pengajuan</div><div class="v">' + r.jumlah + ' paket</div></div>' +
+    '<div><div class="k">' + (nonUmkk ? 'Status Kuota' : (sisa >= 0 ? 'Sisa Batas 15M' : 'Melebihi 15M')) + '</div><div class="v">' + (nonUmkk ? '<span class="text-primary fs-6">Bebas Kuota</span>' : rp(Math.abs(sisa))) + '</div></div>' +
+    '</div>' +
+    (nonUmkk ? '<div class="alert alert-info py-2 small mb-3"><i class="bi bi-info-circle me-1"></i>Penyedia Non UMKK dapat mengajukan paket melebihi batas Rp 15 Miliar.</div>' : miniRuler(r.total, 0) + '<div class="mini-pct mb-3">' + pct.toFixed(1).replace('.', ',') + '% dari 15 Miliar</div>');
+
   const items = r.list.map(p =>
-    '<div class="dp-item' + (p.dihitung ? '' : ' mati') + '"><div class="dp-top"><div class="dp-opd">' + esc(p.OPD_Pengaju) + '</div>' + pill(p.Status) + '</div>' +
+    '<div class="dp-item' + (p.dihitung ? '' : ' mati') + '"><div class="dp-top"><div class="dp-opd">' + esc(p.OPD_Pengaju) + '</div>' + badgeStatus(p.Status) + '</div>' +
     '<div class="dp-nama">' + esc(p.Nama_Paket) + '</div>' +
     '<div class="dp-grid"><div>HPS: <b>' + rp(p.Nilai_HPS) + '</b></div><div>Jumlah: <b>' + p.Jumlah_Tenaga + ' orang</b></div></div></div>').join('');
   return ringkas + items;
@@ -1472,36 +2243,37 @@ $('#btnDokUnggah').addEventListener('click', async () => {
   finally { busy(btn, false); }
 });
 
-const AKSI = {
-  Disetujui: { judul: 'Setujui pengajuan', tombol: 'Setujui', kelas: 'btn-ok', item: false, label: 'Catatan (opsional)' },
-  Ditolak:   { judul: 'Tolak pengajuan', tombol: 'Tolak', kelas: 'btn-no', item: true, label: 'Alasan penolakan umum' },
-  Revisi:    { judul: 'Minta revisi', tombol: 'Kirim permintaan', kelas: 'btn-warn', item: true, label: 'Catatan umum' }
-};
-
 function renderItemAksi(tampil) {
   const box = $('#aksiItems');
   if (!tampil) { box.innerHTML = ''; box.style.display = 'none'; return; }
   box.style.display = '';
+  // Fitur 5: Tanpa link katalog
   box.innerHTML = Object.keys(ITEM_TOLAK).map(k =>
     '<div class="item-row"><div class="form-check"><input class="form-check-input" type="checkbox" id="it-' + k + '" data-item="' + k + '"><label class="form-check-label" for="it-' + k + '">' + esc(ITEM_TOLAK[k]) + '</label></div>' +
-    '<textarea class="form-control item-alasan" id="ia-' + k + '" rows="2" style="display:none" placeholder="Alasan..."></textarea></div>').join('');
+    '<textarea class="form-control item-alasan" id="ia-' + k + '" rows="2" style="display:none" placeholder="Catatan/alasan perbaikan..."></textarea></div>').join('');
 }
 document.addEventListener('change', e => {
   const c = e.target.closest('input[data-item]'); if (!c) return;
   const t = $('#ia-' + c.dataset.item); t.style.display = c.checked ? '' : 'none'; if (c.checked) t.focus();
 });
 
-function bukaAksi(id, status) {
+function bukaAksi(id, statusBaru, customJudul) {
   const p = state.list.find(x => x.ID_Pengajuan === id); if (!p) return;
-  if (status === 'Disetujui' && !p.DokLengkap) { toast('Dokumen harus lengkap sebelum disetujui.', 'warning'); return; }
-  const a = AKSI[status];
-  state.konfirmasiAksi = { id, status };
-  $('#aksiJudul').textContent = a.judul;
-  $('#aksiInfo').innerHTML = '<div class="fw-bold">' + esc(p.Nama_Paket) + '</div>';
-  $('#aksiLabel').textContent = a.label;
+  if (statusBaru === 'Disetujui' && !p.DokLengkap) { toast('Dokumen KAK, Kertas Kerja, dan HPS harus lengkap sebelum disetujui final.', 'warning'); return; }
+  
+  state.konfirmasiAksi = { id, status: statusBaru };
+  $('#aksiJudul').textContent = customJudul || statusBaru;
+  $('#aksiInfo').innerHTML = '<div class="fw-bold">' + esc(p.Nama_Paket) + '</div><div class="small-note text-muted">Penyedia: ' + esc(p.Calon_Penyedia) + ' &bull; HPS: ' + rp(p.Nilai_HPS) + '</div>';
+  $('#aksiLabel').textContent = statusBaru.includes('Revisi') || statusBaru.includes('Tolak') ? 'Catatan / Alasan' : 'Catatan (Opsional)';
   $('#aksiCatatan').value = '';
-  renderItemAksi(a.item);
-  const ok = $('#btnAksiOk'); ok.className = 'btn ' + a.kelas; ok.textContent = a.tombol;
+  
+  const butuhItem = statusBaru.includes('Revisi') || statusBaru.includes('Tolak');
+  renderItemAksi(butuhItem);
+
+  const ok = $('#btnAksiOk');
+  ok.className = 'btn ' + (statusBaru.includes('Tolak') ? 'btn-no' : statusBaru.includes('Revisi') ? 'btn-warn' : 'btn-ok');
+  ok.textContent = statusBaru.includes('Tolak') ? 'Konfirmasi Penolakan' : statusBaru.includes('Revisi') ? 'Kirim Permintaan Revisi' : 'Setujui Pengajuan';
+  
   bootstrap.Modal.getOrCreateInstance($('#modalAksi')).show();
 }
 
@@ -1532,7 +2304,6 @@ function bukaKlarifikasi(id) {
   bootstrap.Modal.getOrCreateInstance($('#modalKlarif')).show();
   muatKlarifikasi();
 
-  // Supabase Realtime Subscription untuk Chat Instan
   if (state.klarSub) state.klarSub.unsubscribe();
   state.klarSub = sbClient
     .channel('klarifikasi_' + id)
@@ -1553,7 +2324,9 @@ function htmlPesan(m) {
     return '<div class="msg sys"><div>Status diubah menjadi <span class="st">' + esc(s[1]) + '</span></div>' +
            (s[2] ? '<div class="txt">' + esc(s[2]) + '</div>' : '') + '<div class="when">' + esc(m.waktu) + '</div></div>';
   }
-  return '<div class="msg' + (m.milikSaya ? ' mine' : '') + '"><div class="who">' + esc(m.pengirim) + '</div>' +
+  const isUndang = m.pesan.includes('[UNDANGAN KLARIFIKASI]');
+  return '<div class="msg' + (m.milikSaya ? ' mine' : '') + (isUndang ? ' border-warning' : '') + '">' +
+         '<div class="who">' + esc(m.pengirim) + ' (' + esc(m.role) + ')</div>' +
          '<div class="txt">' + esc(m.pesan) + '</div><div class="when">' + esc(m.waktu) + '</div></div>';
 }
 
@@ -1594,4 +2367,3 @@ $('#chatInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.s
 </script>
 </body>
 </html>
-
