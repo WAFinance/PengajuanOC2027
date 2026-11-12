@@ -342,6 +342,24 @@
     [data-bs-theme="light"] .msg.mine { color: var(--accent-ink); }
     .po-ini { text-align: center; padding: 0 1rem; line-height: 1.1; word-break: break-word; font-weight: 800; }
     .po-ini.m { font-size: 1.85rem; } .po-ini.l { font-size: 1.35rem; }
+
+    /* ---------- Tombol Cetak Kertas Kerja ---------- */
+    .dchip.print-chip { background: rgba(245,158,11,.15); color: var(--accent-text); border: 1px solid rgba(245,158,11,.3); cursor: pointer; }
+    .dchip.print-chip:hover { background: rgba(245,158,11,.25); border-color: var(--accent); }
+
+    /* Format Cetak Kertas Kerja (Print Mode) */
+    @media print {
+      body * { visibility: hidden !important; }
+      #modalCetakKertas, #modalCetakKertas * { visibility: visible !important; }
+      #modalCetakKertas { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; background: #fff !important; }
+      #modalCetakKertas .modal-dialog { max-width: 100% !important; width: 100% !important; margin: 0 !important; }
+      #modalCetakKertas .modal-content { border: none !important; box-shadow: none !important; border-radius: 0 !important; background: #fff !important; padding: .8cm !important; }
+      #modalCetakKertas .modal-body { padding: 0 !important; }
+      .d-print-none { display: none !important; }
+      .surat-kertas-kerja { color: #000 !important; background: #fff !important; font-family: 'Times New Roman', Times, serif !important; }
+      .surat-kertas-kerja table { color: #000 !important; border-color: #000 !important; }
+      .surat-kertas-kerja th, .surat-kertas-kerja td { border-color: #000 !important; }
+    }
   </style>
 </head>
 <body>
@@ -501,11 +519,23 @@
           </div>
         </div>
         <div id="fileSection" class="mb-4">
-          <div class="form-section-title mb-2"><i class="bi bi-paperclip me-1 text-warning"></i>Dokumen Pendukung <span class="badge bg-secondary-subtle text-secondary fw-normal ms-1">Wajib (Maks. 10 MB per berkas)</span></div>
+          <div class="form-section-title mb-2"><i class="bi bi-paperclip me-1 text-warning"></i>Dokumen Pendukung <span class="badge bg-secondary-subtle text-secondary fw-normal ms-1">Wajib KAK & HPS (Maks. 10 MB per berkas)</span></div>
           <div class="row g-3" id="pickList"></div>
+          <div class="alert alert-info py-2 px-3 small d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3 mb-0">
+            <div>
+              <i class="bi bi-info-circle-fill me-1 text-primary"></i>
+              <b>Kertas Kerja:</b> Tidak perlu mengunggah berkas kertas kerja. Hasil pengisian formulir ini otomatis menjadi dokumen <b>Kertas Kerja Resmi</b> yang siap dicetak/disimpan.
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnPratinjauKertasForm">
+              <i class="bi bi-printer me-1"></i>Pratinjau / Cetak Kertas Kerja
+            </button>
+          </div>
         </div>
-        <div class="d-flex gap-2 pb-3">
+        <div class="d-flex flex-wrap gap-2 pb-3 align-items-center">
           <button class="btn btn-main px-4 py-2" id="btnKirim" type="submit">Kirim pengajuan</button>
+          <button class="btn btn-line px-3 py-2" id="btnCetakKertasBawah" type="button">
+            <i class="bi bi-printer me-1 text-warning"></i>Cetak Kertas Kerja (Formulir)
+          </button>
         </div>
       </form>
     </section>
@@ -780,6 +810,34 @@
   </div>
 </div>
 
+<!-- =============================== MODAL CETAK KERTAS KERJA =============================== -->
+<div class="modal fade" id="modalCetakKertas" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header d-print-none bg-body-tertiary">
+        <div>
+          <h5 class="modal-title"><i class="bi bi-printer-fill me-2 text-warning"></i>Kertas Kerja Pengadaan Tenaga Alih Daya</h5>
+          <div class="small-note">Hasil pengisian formulir resmi sebagai pengganti dokumen kertas kerja e-purchasing manual</div>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-main btn-sm px-3" id="btnAksiPrintModal"><i class="bi bi-printer-fill me-1"></i> Cetak / Simpan PDF</button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+      </div>
+      <div class="modal-body p-4 bg-white text-dark printable-kertas" id="kertasPrintContent">
+        <!-- Render otomatis via renderKertasKerjaHtml() -->
+      </div>
+      <div class="modal-footer d-print-none bg-body-tertiary justify-content-between">
+        <div class="small text-muted"><i class="bi bi-info-circle me-1"></i>Gunakan opsi <b>Save as PDF</b> pada jendela dialog print untuk menyimpan sebagai berkas PDF resmi.</div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-line btn-sm" data-bs-dismiss="modal">Tutup</button>
+          <button type="button" class="btn btn-main btn-sm" id="btnAksiPrintModalBawah"><i class="bi bi-printer-fill me-1"></i> Cetak Dokumen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container position-fixed top-0 end-0 p-3" id="toasts" style="z-index:2000"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -795,11 +853,12 @@ const sbClient = (window.supabase && window.supabase.createClient) ? window.supa
 
 const LIMIT = 15000000000; // Rp 15 Miliar
 const UKURAN_HALAMAN = 50;
-const JENIS_DOK = { kak: 'KAK / Spesifikasi teknis', kertas: 'Kertas kerja e-purchasing', hps: 'HPS' };
-const DOK_PENDEK = { kak: 'KAK', kertas: 'Kertas kerja', hps: 'HPS' };
+// Dokumen pendukung yang diunggah OPD: KAK dan HPS (Kertas kerja digantikan cetak hasil formulir)
+const JENIS_DOK = { kak: 'KAK / Spesifikasi teknis', hps: 'HPS' };
+const DOK_PENDEK = { kak: 'KAK', hps: 'HPS' };
 
-// Fitur 5: Hapus bagian link katalog dari pilihan item revisi
-const ITEM_TOLAK = { kak: 'KAK / Spesifikasi teknis', kertas: 'Kertas kerja e-purchasing', hps: 'HPS', penyedia: 'Calon penyedia' };
+// Fitur revisi: KAK, HPS, Formulir / Kertas Kerja, Calon Penyedia
+const ITEM_TOLAK = { kak: 'KAK / Spesifikasi teknis', hps: 'HPS', formulir: 'Data Formulir / Kertas Kerja', penyedia: 'Calon penyedia' };
 const MAKS_MB = 10, EKSTENSI_OK = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
 const SESSION_KEY = 'pengajuan_sesi';
 
@@ -832,6 +891,22 @@ function singkatan(nama) { return SINGKATAN[normNama(nama)] || null; }
 const $ = (s, el) => (el || document).querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rp = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+
+function terbilang(n) {
+  n = Math.abs(Number(n) || 0);
+  const huruf = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam', 'Tujuh', 'Delapan', 'Sembilan', 'Sepuluh', 'Sebelas'];
+  if (n < 12) return huruf[n];
+  if (n < 20) return terbilang(n - 10) + ' Belas';
+  if (n < 100) return terbilang(Math.floor(n / 10)) + ' Puluh' + (n % 10 ? ' ' + terbilang(n % 10) : '');
+  if (n < 200) return 'Seratus' + (n % 100 ? ' ' + terbilang(n % 100) : '');
+  if (n < 1000) return terbilang(Math.floor(n / 100)) + ' Ratus' + (n % 100 ? ' ' + terbilang(n % 100) : '');
+  if (n < 2000) return 'Seribu' + (n % 1000 ? ' ' + terbilang(n % 1000) : '');
+  if (n < 1000000) return terbilang(Math.floor(n / 1000)) + ' Ribu' + (n % 1000 ? ' ' + terbilang(n % 1000) : '');
+  if (n < 1000000000) return terbilang(Math.floor(n / 1000000)) + ' Juta' + (n % 1000000 ? ' ' + terbilang(n % 1000000) : '');
+  if (n < 1000000000000) return terbilang(Math.floor(n / 1000000000)) + ' Miliar' + (n % 1000000000 ? ' ' + terbilang(n % 1000000000) : '');
+  if (n < 1000000000000000) return terbilang(Math.floor(n / 1000000000000)) + ' Triliun' + (n % 1000000000000 ? ' ' + terbilang(n % 1000000000000) : '');
+  return String(n);
+}
 
 const store = (function () {
   try { sessionStorage.setItem('_t', '1'); sessionStorage.removeItem('_t'); return sessionStorage; }
@@ -991,10 +1066,9 @@ const api = async (fn, ...args) => {
       const list = (data || []).map(p => {
         const dok = {
           kak: p.dokumen_kak ? p.dokumen_kak.split('|')[1] : null,
-          kertas: p.dokumen_kertas_kerja ? p.dokumen_kertas_kerja.split('|')[1] : null,
           hps: p.dokumen_hps ? p.dokumen_hps.split('|')[1] : null
         };
-        const dokLengkap = !!(dok.kak && dok.kertas && dok.hps);
+        const dokLengkap = !!(dok.kak && dok.hps);
         return {
           ID_Pengajuan: p.id,
           Timestamp: new Date(p.created_at).toLocaleString('id-ID'),
@@ -1008,12 +1082,16 @@ const api = async (fn, ...args) => {
           Tahap: p.tahap || (p.status === 'Menunggu Verifikasi Tahap 2' || p.status === 'Revisi Dokumen' || p.status === 'Disetujui' ? 2 : 1),
           UndanganKlarifikasi: p.undangan_klarifikasi || null,
           RiwayatPenyedia: p.riwayat_penyedia || [],
+          VerifikatorTahap1: p.verifikator_tahap1,
+          TglTahap1: p.tgl_verifikasi_tahap1,
+          VerifikatorTahap2: p.verifikator_tahap2,
+          TglTahap2: p.tgl_verifikasi_tahap2,
           Link_Katalog: p.link_katalog,
           Catatan_Umum: p.catatan_umum,
           CatatanItem: p.catatan_item || {},
           Dok: dok,
           DokLengkap: dokLengkap,
-          RawDok: { kak: p.dokumen_kak, kertas: p.dokumen_kertas_kerja, hps: p.dokumen_hps }
+          RawDok: { kak: p.dokumen_kak, hps: p.dokumen_hps }
         };
       });
 
@@ -1055,7 +1133,7 @@ const api = async (fn, ...args) => {
           Jumlah_Tenaga: p.jumlah_tenaga,
           Status: p.status,
           Link_Katalog: p.link_katalog,
-          DokLengkap: !!(p.dokumen_kak && p.dokumen_kertas_kerja && p.dokumen_hps),
+          DokLengkap: !!(p.dokumen_kak && p.dokumen_hps),
           dihitung: dihitung
         };
       });
@@ -1444,9 +1522,9 @@ function mulaiSesi(s) {
   $('#whoRole').textContent = opd ? '(' + s.username + ')' : (s.satker || 'Surakarta');
   $('#heroTag').textContent = s.role;
   $('#heroSub').textContent = opd
-    ? 'Halo, ' + (s.satker || s.username) + '. Ajukan paket pengajuan, lengkapi dokumen KAK, Kertas Kerja, HPS, dan pantau proses verifikasi.'
+    ? 'Halo, ' + (s.satker || s.username) + '. Ajukan paket, lengkapi berkas KAK & HPS, cetak Kertas Kerja resmi dari formulir, dan pantau proses verifikasi.'
     : pokja
-    ? 'Halo, Pokja ' + s.username + '. Lakukan Verifikasi Tahap 2 untuk Dokumen Persiapan (KAK, Kertas Kerja, HPS) pada paket yang telah lolos Tahap 1.'
+    ? 'Halo, Pokja ' + s.username + '. Lakukan Verifikasi Tahap 2 untuk Dokumen Persiapan (KAK, Kertas Kerja Formulir, HPS) pada paket yang telah lolos Tahap 1.'
     : 'Halo, Admin ' + s.username + '. Lakukan Verifikasi Tahap 1 untuk Calon Penyedia & Evaluasi Batas Kuota 15 Miliar (UMKK vs Non UMKK).';
 
   $('#qLabel').textContent = opd ? 'Total HPS pengajuan saya' : 'Total HPS pengajuan aktif';
@@ -1529,9 +1607,13 @@ function badgeStatus(st) {
 }
 
 function dokChips(p) {
-  return Object.keys(JENIS_DOK).map(k => p.Dok[k]
-    ? '<button type="button" class="dchip ok" data-act="unduh" data-id="' + esc(p.ID_Pengajuan) + '" data-jenis="' + k + '"><i class="bi bi-file-earmark-arrow-down"></i> ' + DOK_PENDEK[k] + '</button>'
+  const berkas = Object.keys(JENIS_DOK).map(k => p.Dok[k]
+    ? '<button type="button" class="dchip ok" data-act="unduh" data-id="' + esc(p.ID_Pengajuan) + '" data-jenis="' + k + '" title="Unduh berkas ' + DOK_PENDEK[k] + '"><i class="bi bi-file-earmark-arrow-down"></i> ' + DOK_PENDEK[k] + '</button>'
     : '<span class="dchip no"><i class="bi bi-exclamation-circle"></i> ' + DOK_PENDEK[k] + ' belum ada</span>').join('');
+
+  const cetak = '<button type="button" class="dchip print-chip" data-act="cetak-kertas" data-id="' + esc(p.ID_Pengajuan) + '" title="Cetak Kertas Kerja Hasil Formulir"><i class="bi bi-printer-fill text-warning"></i> Kertas Kerja (Cetak)</button>';
+
+  return berkas + cetak;
 }
 
 const urlAman = u => /^https?:\/\/\S{4,}$/i.test(String(u || '').trim());
@@ -1569,7 +1651,8 @@ function aksiKartu(p) {
 
   // 1. Role OPD
   if (isOpd(role)) {
-    let html = '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text me-1"></i>Klarifikasi</button>';
+    let html = '<button class="btn btn-sm btn-line" data-act="cetak-kertas" data-id="' + id + '" title="Cetak Kertas Kerja Hasil Formulir"><i class="bi bi-printer me-1 text-warning"></i>Cetak</button>' +
+      '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text me-1"></i>Klarifikasi</button>';
     
     // Fitur 6: Ganti Penyedia ketika ditolak verifikasi Tahap 1
     if (p.Status === 'Penyedia Ditolak') {
@@ -1579,7 +1662,7 @@ function aksiKartu(p) {
     // Bisa ganti dokumen saat status awal atau revisi dokumen
     const bisaDok = p.Status === 'Pending' || p.Status === 'Menunggu Verifikasi Tahap 1' || p.Status === 'Revisi Dokumen' || p.Status === 'Revisi';
     if (bisaDok) {
-      html += '<button class="btn btn-sm ' + (p.DokLengkap ? 'btn-line' : 'btn-warn') + '" data-act="dok" data-id="' + id + '"><i class="bi bi-paperclip me-1"></i>' + (p.DokLengkap ? 'Ganti dokumen' : 'Lengkapi dokumen') + '</button>';
+      html += '<button class="btn btn-sm ' + (p.DokLengkap ? 'btn-line' : 'btn-warn') + '" data-act="dok" data-id="' + id + '"><i class="bi bi-paperclip me-1"></i>' + (p.DokLengkap ? 'Ganti berkas' : 'Lengkapi berkas') + '</button>';
     }
 
     if (p.Status === 'Revisi' || p.Status === 'Revisi Dokumen') {
@@ -1595,19 +1678,21 @@ function aksiKartu(p) {
       ? '<button class="btn btn-sm btn-ok" data-act="Tahap1_Setuju" data-id="' + id + '"><i class="bi bi-check2-circle me-1"></i>Lolos Tahap 1</button>' +
         '<button class="btn btn-sm btn-no" data-act="Tahap1_Tolak" data-id="' + id + '" title="Tolak penyedia agar OPD mengganti penyedia"><i class="bi bi-x-circle me-1"></i>Tolak Penyedia</button>'
       : '') +
+      '<button class="btn btn-sm btn-line" data-act="cetak-kertas" data-id="' + id + '" title="Lihat / Cetak Kertas Kerja"><i class="bi bi-printer me-1 text-warning"></i>Kertas Kerja</button>' +
       '<button class="btn btn-sm btn-line text-warning" data-act="undangklarif" data-id="' + id + '" title="Kirim Undangan Klarifikasi Rapat"><i class="bi bi-envelope-paper me-1"></i>Undang</button>' +
       '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text"></i></button>';
   }
 
   // 3. Role Pokja (Verifikasi Tahap 2: Dokumen Persiapan KAK, Kertas Kerja, HPS)
   if (isPokja(role)) {
-    const dis = !p.DokLengkap ? 'disabled title="Dokumen belum lengkap"' : '';
+    const dis = !p.DokLengkap ? 'disabled title="Dokumen KAK dan HPS belum lengkap"' : '';
     const isTahap2 = p.Status === 'Menunggu Verifikasi Tahap 2' || p.Status === 'Revisi Dokumen' || p.Status === 'Lolos Tahap 1';
     return (isTahap2
       ? '<button class="btn btn-sm btn-ok" data-act="Tahap2_Setuju" data-id="' + id + '" ' + dis + '><i class="bi bi-check-all me-1"></i>Setujui Final</button>' +
         '<button class="btn btn-sm btn-line" data-act="Tahap2_Revisi" data-id="' + id + '"><i class="bi bi-pencil me-1"></i>Minta Revisi</button>' +
         '<button class="btn btn-sm btn-quiet" data-act="Tahap2_Tolak" data-id="' + id + '"><i class="bi bi-trash me-1"></i>Tolak</button>'
       : '') +
+      '<button class="btn btn-sm btn-line" data-act="cetak-kertas" data-id="' + id + '" title="Lihat / Cetak Kertas Kerja"><i class="bi bi-printer me-1 text-warning"></i>Kertas Kerja</button>' +
       '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text"></i></button>';
   }
 
@@ -1912,6 +1997,7 @@ document.addEventListener('click', e => {
   if (act === 'edit') return mulaiEdit(id);
   if (act === 'dok') return bukaDok(id);
   if (act === 'unduh') return unduh(id, b.dataset.jenis);
+  if (act === 'cetak-kertas') return bukaCetakKertas(id);
   if (act === 'gantipen') return bukaGantiPenyedia(id);
   if (act === 'undangklarif') return bukaModalUndangan(id);
   
@@ -1922,6 +2008,192 @@ document.addEventListener('click', e => {
   if (act === 'Tahap2_Revisi') return bukaAksi(id, 'Revisi Dokumen', 'Minta Revisi Dokumen Persiapan');
   if (act === 'Tahap2_Tolak') return bukaAksi(id, 'Ditolak', 'Tolak Dokumen Persiapan');
 });
+
+/* =====================================================================
+ *  FITUR CETAK KERTAS KERJA PENGADAAN (PENGGANTI BERKAS MANUAL)
+ * ===================================================================== */
+function renderKertasKerjaHtml(d) {
+  const isDraft = !d.ID_Pengajuan;
+  const noReg = d.ID_Pengajuan || 'DRAFT-FORMULIR-' + Date.now().toString().slice(-6);
+  const tgl = d.Timestamp || (new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB');
+  const nonUmkk = isNonUmkk(d.Calon_Penyedia);
+  const hpsVal = Number(d.Nilai_HPS) || 0;
+  const hpsRp = rp(hpsVal);
+  const terbilangStr = terbilang(hpsVal) + ' Rupiah';
+  const satker = d.OPD_Pengaju || state.satker || '-';
+  const satkerNama = state.ref && state.ref.satker ? (state.ref.satker.find(s => normNama(s) === normNama(satker)) || satker) : satker;
+
+  const kakStatus = d.Dok && d.Dok.kak ? '<span class="text-success fw-bold">✓ Terunggah (' + esc(d.Dok.kak) + ')</span>' : (d.hasKakFile ? '<span class="text-success fw-bold">✓ Terlampir di Formulir</span>' : '<span class="text-muted fst-italic">Belum dilampirkan</span>');
+  const hpsStatus = d.Dok && d.Dok.hps ? '<span class="text-success fw-bold">✓ Terunggah (' + esc(d.Dok.hps) + ')</span>' : (d.hasHpsFile ? '<span class="text-success fw-bold">✓ Terlampir di Formulir</span>' : '<span class="text-muted fst-italic">Belum dilampirkan</span>');
+
+  const statusTeks = d.Status || 'Pengajuan Baru (Draft)';
+  const tahapTeks = d.Tahap ? 'Tahap ' + d.Tahap : 'Tahap 1 (Evaluasi Penyedia)';
+  const verifTahap1 = d.VerifikatorTahap1 ? (esc(d.VerifikatorTahap1) + ' (' + (d.TglTahap1 ? new Date(d.TglTahap1).toLocaleDateString('id-ID') : '-') + ')') : 'Menunggu Evaluasi';
+  const verifTahap2 = d.VerifikatorTahap2 ? (esc(d.VerifikatorTahap2) + ' (' + (d.TglTahap2 ? new Date(d.TglTahap2).toLocaleDateString('id-ID') : '-') + ')') : 'Menunggu Pemeriksaan Dokumen';
+  const catatan = d.Catatan_Umum ? esc(d.Catatan_Umum) : 'Kertas kerja hasil pengisian formulir sistem e-purchasing tenaga alih daya Pemerintah Kota Surakarta.';
+
+  return '<div class="surat-kertas-kerja p-4" style="max-width: 860px; margin: 0 auto; color: #111;">' +
+    '<!-- KOP SURAT PEMKOT SURAKARTA -->' +
+    '<div class="text-center pb-2 mb-3" style="border-bottom: 3px double #000;">' +
+      '<div class="fw-bold text-uppercase" style="font-size: 15pt; letter-spacing: 1.5px; line-height: 1.2;">PEMERINTAH KOTA SURAKARTA</div>' +
+      '<div class="fw-bold text-uppercase" style="font-size: 13pt; line-height: 1.2;">SEKRETARIAT DAERAH</div>' +
+      '<div class="fw-bold text-uppercase" style="font-size: 11pt; letter-spacing: .5px;">BAGIAN PENGADAAN BARANG DAN JASA</div>' +
+      '<div style="font-size: 8.5pt; color: #444;">Jl. Jenderal Sudirman No. 2, Surakarta, Jawa Tengah 57111 &bull; Telp. (0271) 642020</div>' +
+    '</div>' +
+
+    '<!-- JUDUL DOKUMEN -->' +
+    '<div class="text-center my-3">' +
+      '<div class="fw-bold text-uppercase text-decoration-underline" style="font-size: 12.5pt; letter-spacing: .5px;">' +
+        'KERTAS KERJA PERSIAPAN E-PURCHASING TENAGA ALIH DAYA (OUTSOURCING)' +
+      '</div>' +
+      '<div class="small mt-1 text-muted">Nomor Registrasi: <b class="text-dark">' + esc(noReg) + '</b> ' + (isDraft ? '<span class="badge bg-warning text-dark ms-1">DRAFT FORMULIR</span>' : '') + '</div>' +
+    '</div>' +
+
+    '<!-- TABEL RINCIAN PENGADAAN -->' +
+    '<table class="table table-bordered table-sm my-3 align-middle" style="font-size: 9.8pt; border-color: #333;">' +
+      '<tbody>' +
+        '<tr>' +
+          '<th style="width: 32%; background-color: #f8f9fa;">Satker / OPD Pengaju</th>' +
+          '<td><b>' + esc(satkerNama) + '</b></td>' +
+        '</tr>' +
+        '<tr>' +
+          '<th style="background-color: #f8f9fa;">Nama Paket Pengadaan</th>' +
+          '<td><b>' + esc(d.Nama_Paket || '-') + '</b></td>' +
+        '</tr>' +
+        '<tr>' +
+          '<th style="background-color: #f8f9fa;">Jenis Tenaga Alih Daya</th>' +
+          '<td>' + esc(d.Jenis_Tenaga_Alih_Daya || '-') + '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<th style="background-color: #f8f9fa;">Jumlah Kebutuhan Personel</th>' +
+          '<td><b>' + (d.Jumlah_Tenaga || 0) + ' Orang</b></td>' +
+        '</tr>' +
+        '<tr>' +
+          '<th style="background-color: #f8f9fa;">Nilai Total HPS (Termasuk PPN)</th>' +
+          '<td>' +
+            '<span class="fw-bold text-primary fs-6">' + hpsRp + '</span>' +
+            '<div class="fst-italic text-muted small mt-1">Terbilang: <b>' + terbilangStr + '</b></div>' +
+          '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<th style="background-color: #f8f9fa;">Calon Penyedia yang Dipilih</th>' +
+          '<td>' +
+            '<b>' + esc(d.Calon_Penyedia || '-') + '</b>' +
+            '<span class="badge ' + (nonUmkk ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle') + ' ms-2">' +
+              (nonUmkk ? 'Non UMKK (Bebas Batas 15M)' : 'UMKK (Batas Maks. 15 Miliar)') +
+            '</span>' +
+          '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<th style="background-color: #f8f9fa;">Tautan Etalase e-Katalog</th>' +
+          '<td class="text-break" style="font-size: 9pt;">' + (d.Link_Katalog ? '<a href="' + esc(d.Link_Katalog) + '" target="_blank">' + esc(d.Link_Katalog) + '</a>' : '<span class="text-muted fst-italic">Belum dilampirkan</span>') + '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<th style="background-color: #f8f9fa;">Waktu Pengajuan / Pencatatan</th>' +
+          '<td>' + esc(tgl) + '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<th style="background-color: #f8f9fa;">Status Verifikasi Sistem</th>' +
+          '<td><b>' + esc(statusTeks) + '</b> <span class="badge bg-secondary ms-1">' + tahapTeks + '</span></td>' +
+        '</tr>' +
+      '</tbody>' +
+    '</table>' +
+
+    '<!-- KELENGKAPAN DOKUMEN -->' +
+    '<div class="mb-3">' +
+      '<div class="fw-bold mb-1" style="font-size: 9.8pt;">Kelengkapan Dokumen Persiapan Pengadaan:</div>' +
+      '<table class="table table-bordered table-sm text-center" style="font-size: 9.2pt; border-color: #333;">' +
+        '<thead style="background-color: #f8f9fa;">' +
+          '<tr><th style="width: 7%;">No</th><th style="width: 48%; text-align: left;">Nama Dokumen Pendukung</th><th style="width: 25%;">Status</th><th style="width: 20%;">Bentuk Dokumen</th></tr>' +
+        '</thead>' +
+        '<tbody>' +
+          '<tr><td>1</td><td style="text-align: left;">Kerangka Acuan Kerja (KAK) / Spesifikasi Teknis</td><td>' + kakStatus + '</td><td>Berkas Terunggah</td></tr>' +
+          '<tr><td>2</td><td style="text-align: left;">Harga Perkiraan Sendiri (HPS) & Rincian Komponen</td><td>' + hpsStatus + '</td><td>Berkas Terunggah</td></tr>' +
+          '<tr><td>3</td><td style="text-align: left;">Kertas Kerja Pengadaan Tenaga Alih Daya</td><td><span class="text-success fw-bold">✓ Dibuat Sistem</span></td><td>Hasil Formulir Ini</td></tr>' +
+        '</tbody>' +
+      '</table>' +
+    '</div>' +
+
+    '<!-- RIWAYAT PENELAAHAN / CATATAN -->' +
+    '<div class="mb-4" style="font-size: 9.2pt;">' +
+      '<div class="fw-bold mb-1">Catatan Penelaahan / Verifikasi:</div>' +
+      '<div class="p-2 border rounded bg-light" style="min-height: 48px;">' +
+        '<div>' + catatan + '</div>' +
+        '<div class="small text-muted mt-2 pt-2 border-top">' +
+          'Verifikator Tahap 1 (Admin BPBJ): <b>' + verifTahap1 + '</b> &bull; ' +
+          'Verifikator Tahap 2 (Pokja BPBJ): <b>' + verifTahap2 + '</b>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<!-- LEMBAR TANDA TANGAN PENGESAHAN -->' +
+    '<div class="row text-center mt-4 pt-2" style="font-size: 9.5pt; page-break-inside: avoid;">' +
+      '<div class="col-6">' +
+        '<div>Mengetahui / Memeriksa,</div>' +
+        '<div class="fw-bold">Bagian Pengadaan Barang dan Jasa</div>' +
+        '<div class="small text-muted">Sekretariat Daerah Kota Surakarta</div>' +
+        '<div style="height: 65px;"></div>' +
+        '<div class="fw-bold text-decoration-underline">( Tim Verifikator BPBJ )</div>' +
+        '<div class="small text-muted">Admin / Pokja Pemilihan</div>' +
+      '</div>' +
+      '<div class="col-6">' +
+        '<div>Surakarta, ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) + '</div>' +
+        '<div class="fw-bold">Pejabat Pembuat Komitmen (PPK)</div>' +
+        '<div class="small text-muted">' + esc(satkerNama) + '</div>' +
+        '<div style="height: 65px;"></div>' +
+        '<div class="fw-bold text-decoration-underline">( .................................................... )</div>' +
+        '<div class="small text-muted">NIP. ....................................................</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function bukaCetakKertas(id) {
+  const p = state.list.find(x => x.ID_Pengajuan === id);
+  if (!p) { toast('Data pengajuan tidak ditemukan.', 'warning'); return; }
+  $('#kertasPrintContent').innerHTML = renderKertasKerjaHtml(p);
+  bootstrap.Modal.getOrCreateInstance($('#modalCetakKertas')).show();
+}
+
+function cetakKertasDraftForm() {
+  const nama = $('#fNama').value.trim();
+  const penyedia = $('#fPenyedia').value.trim();
+  const hps = getNilai();
+  const jenis = $('#fJenis').value.trim();
+  const jumlah = Number($('#fJumlah').value) || 0;
+  const link = $('#fLink').value.trim();
+
+  if (!nama && !hps) {
+    toast('Silakan isi nama paket dan nilai HPS terlebih dahulu untuk mencetak kertas kerja.', 'warning');
+    $('#fNama').focus();
+    return;
+  }
+
+  const sumber = sumberDok($('#fileSection'));
+  const d = {
+    ID_Pengajuan: state.editingId || null,
+    Timestamp: state.editingId ? null : new Date().toLocaleString('id-ID'),
+    OPD_Pengaju: state.satker,
+    Nama_Paket: nama || '(Belum diisi)',
+    Calon_Penyedia: penyedia || '(Belum dipilih)',
+    Nilai_HPS: hps,
+    Jenis_Tenaga_Alih_Daya: jenis || '(Belum dipilih)',
+    Jumlah_Tenaga: jumlah,
+    Link_Katalog: link,
+    Status: state.editingId ? 'Dalam Perbaikan Revisi' : 'Draft Pengajuan Baru',
+    Tahap: 1,
+    hasKakFile: !!(sumber.kak && (sumber.kak.file || sumber.kak.link)),
+    hasHpsFile: !!(sumber.hps && (sumber.hps.file || sumber.hps.link))
+  };
+
+  $('#kertasPrintContent').innerHTML = renderKertasKerjaHtml(d);
+  bootstrap.Modal.getOrCreateInstance($('#modalCetakKertas')).show();
+}
+
+$('#btnPratinjauKertasForm').addEventListener('click', cetakKertasDraftForm);
+$('#btnCetakKertasBawah').addEventListener('click', cetakKertasDraftForm);
+$('#btnAksiPrintModal').addEventListener('click', () => window.print());
+$('#btnAksiPrintModalBawah').addEventListener('click', () => window.print());
 
 /* Modal Ganti Penyedia (OPD) */
 let gantiPenId = null;
@@ -2133,7 +2405,7 @@ const dataForm = () => ({ link: $('#fLink').value.trim(), nama: $('#fNama').valu
 
 function resetForm() {
   $('#formPengajuan').reset();
-  $('#pickList').innerHTML = Object.keys(JENIS_DOK).map(k => '<div class="col-lg-4">' + pickerHtml(k, 'f') + '</div>').join('');
+  $('#pickList').innerHTML = Object.keys(JENIS_DOK).map(k => '<div class="col-lg-6">' + pickerHtml(k, 'f') + '</div>').join('');
   state.editingId = null; state.pen = { nama: '', total: 0, jumlah: 0, ada: false, isNonUmkk: false };
   $('#panelForm').classList.remove('editing');
   $('#btnKirim').textContent = 'Kirim pengajuan';
@@ -2259,7 +2531,7 @@ document.addEventListener('change', e => {
 
 function bukaAksi(id, statusBaru, customJudul) {
   const p = state.list.find(x => x.ID_Pengajuan === id); if (!p) return;
-  if (statusBaru === 'Disetujui' && !p.DokLengkap) { toast('Dokumen KAK, Kertas Kerja, dan HPS harus lengkap sebelum disetujui final.', 'warning'); return; }
+  if (statusBaru === 'Disetujui' && !p.DokLengkap) { toast('Dokumen KAK dan HPS harus lengkap sebelum disetujui final.', 'warning'); return; }
   
   state.konfirmasiAksi = { id, status: statusBaru };
   $('#aksiJudul').textContent = customJudul || statusBaru;
