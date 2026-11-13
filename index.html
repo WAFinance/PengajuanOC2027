@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pengajuan Tenaga Alih Daya (Supabase)</title>
+  <title>Pengajuan Tenaga Alih Daya</title>
   <script>
     (function () {
       var t = null;
@@ -18,8 +18,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <!-- Supabase JS Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Firebase SDK (compat — no bundler needed) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
   <style>
     /* Tema modern: Slate Dark & Crisp Light */
@@ -843,13 +845,19 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 /* =====================================================================
- *  KONFIGURASI SUPABASE & KONSTANTA
+ *  KONFIGURASI FIREBASE & KONSTANTA
  * ===================================================================== */
-const RAW_SUPABASE_URL = "https://cccwpgjpzwaioopilxno.supabase.co/rest/v1/";
-const SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
-const SUPABASE_ANON_KEY = "sb_publishable_mqR0IRjdCxTWsSSK0h63Dw_j5n7yKrr";
-
-const sbClient = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+const firebaseConfig = {
+  apiKey: "AIzaSyDqOhN3rVfN3vOLePJQTy4Il7GEGe2rjXY",
+  authDomain: "pengajuanoc2027-ff269.firebaseapp.com",
+  projectId: "pengajuanoc2027-ff269",
+  storageBucket: "pengajuanoc2027-ff269.firebasestorage.app",
+  messagingSenderId: "64141738061",
+  appId: "1:64141738061:web:ba05726475ab8b482f5c04"
+};
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const fbDb  = firebase.firestore();
 
 const LIMIT = 15000000000; // Rp 15 Miliar
 const UKURAN_HALAMAN = 50;
@@ -942,313 +950,419 @@ function busy(btn, on, teks) {
 const gagal = e => { if (!e) return; toast(e.message || 'Terjadi kesalahan.', 'danger'); };
 
 /* =====================================================================
- *  API ADAPTER DENGAN SUPABASE
+ *  API ADAPTER — FIREBASE (Firestore + Auth)
  * ===================================================================== */
-const api = async (fn, ...args) => {
-  if (!sbClient) throw new Error('Supabase Client belum dikonfigurasi. Periksa SUPABASE_URL & KEY.');
 
+// Helper: timestamp Firestore → string Indonesia
+function tsToStr(ts) {
+  if (!ts) return '-';
+  try { return ts.toDate().toLocaleString('id-ID'); } catch (e) { return new Date(ts).toLocaleString('id-ID'); }
+}
+
+const api = async (fn, ...args) => {
   switch (fn) {
+
+    /* ---- LOGIN ---- */
     case 'login': {
-      const [u, p] = args;
-      const { data, error } = await sbClient.rpc('login_user', { p_username: u, p_password: p });
-      if (error) throw error;
-      return data;
+      const [input, password] = args;
+      let email = input.trim();
+
+      // Jika bukan format email, cari email dari username di Firestore
+      if (!email.includes('@')) {
+        const snap = await fbDb.collection('users')
+          .where('username_lower', '==', email.toLowerCase()).limit(1).get();
+        if (snap.empty) return { ok: false, message: 'Username atau email tidak ditemukan.' };
+        email = snap.docs[0].data().email;
+      }
+
+      let cred;
+      try {
+        cred = await fbAuth.signInWithEmailAndPassword(email, password);
+      } catch (e) {
+        const msg = (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential')
+          ? 'Password salah.' : (e.code === 'auth/user-not-found') ? 'Akun tidak ditemukan.' : 'Login gagal: ' + e.message;
+        return { ok: false, message: msg };
+      }
+
+      // Ambil profil dari Firestore
+      const uid = cred.user.uid;
+      let userData = null;
+      const userDoc = await fbDb.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        userData = userDoc.data();
+      } else {
+        // Fallback: cari by email
+        const snap2 = await fbDb.collection('users').where('email', '==', email.toLowerCase()).limit(1).get();
+        if (!snap2.empty) userData = snap2.docs[0].data();
+      }
+
+      if (!userData) { await fbAuth.signOut(); return { ok: false, message: 'Profil akun tidak ditemukan.' }; }
+      if (userData.status !== 'Aktif') {
+        await fbAuth.signOut();
+        return { ok: false, message: userData.status === 'Menunggu' ? 'Akun Anda menunggu persetujuan Admin.' : 'Akun Anda tidak aktif. Hubungi Admin.' };
+      }
+
+      return { ok: true, username: userData.username, role: userData.role, satker: userData.satker || '', email: userData.email };
     }
+
+    /* ---- LUPA PASSWORD — Firebase kirim email reset ---- */
     case 'mintaResetPassword': {
       const [email] = args;
-      const { data, error } = await sbClient.rpc('minta_reset_password', { p_email: email });
-      if (error) throw error;
-      return data;
+      const em = email.trim().toLowerCase();
+      // Verifikasi email terdaftar di sistem
+      const snap = await fbDb.collection('users').where('email', '==', em).limit(1).get();
+      if (snap.empty) return { ok: false, message: 'Email tidak ditemukan dalam sistem.' };
+      try {
+        await fbAuth.sendPasswordResetEmail(em);
+      } catch (e) {
+        return { ok: false, message: 'Gagal mengirim email: ' + e.message };
+      }
+      return { ok: true, message: 'Link reset password telah dikirim ke ' + em + '. Silakan cek inbox atau folder Spam, lalu klik link di email tersebut.' };
     }
+
     case 'prosesResetPassword': {
-      const [email, token, passBaru] = args;
-      const { data, error } = await sbClient.rpc('proses_reset_password', { p_email: email, p_token: token, p_password_baru: passBaru });
-      if (error) throw error;
-      return data;
+      // Firebase menangani reset via link email — tidak ada OTP di app
+      return { ok: true, message: 'Silakan klik link di email Anda untuk membuat password baru.' };
     }
+
+    /* ---- REFERENSI (satker, jenis tenaga, penyedia) ---- */
     case 'getReferensi': {
       const [rS, rJ, rP] = await Promise.all([
-        sbClient.from('referensi_satker').select('nama').order('nama'),
-        sbClient.from('referensi_jenis_tenaga').select('nama').order('nama'),
-        sbClient.from('referensi_penyedia').select('nama, kategori').order('nama')
+        fbDb.collection('referensi_satker').orderBy('nama').get(),
+        fbDb.collection('referensi_jenis_tenaga').orderBy('nama').get(),
+        fbDb.collection('referensi_penyedia').orderBy('nama').get()
       ]);
       return {
-        satker: (rS.data || []).map(x => x.nama),
-        jenis: (rJ.data || []).map(x => x.nama),
-        penyedia: (rP.data || []).map(x => ({
-          nama: x.nama,
-          kategori: x.kategori || (isNonUmkk(x.nama) ? 'Non UMKK' : 'UMKK')
+        satker  : rS.docs.map(d => d.data().nama),
+        jenis   : rJ.docs.map(d => d.data().nama),
+        penyedia: rP.docs.map(d => ({
+          nama    : d.data().nama,
+          kategori: d.data().kategori || (isNonUmkk(d.data().nama) ? 'Non UMKK' : 'UMKK')
         }))
       };
     }
+
+    /* ---- DAFTAR AKUN (OPD mendaftar sendiri) ---- */
     case 'daftarAkun': {
       const [satker, username, password, email] = args;
-      const { data: existU } = await sbClient.from('app_users').select('username').ilike('username', username).limit(1);
-      if (existU && existU.length > 0) return { ok: false, message: 'Username sudah dipakai.' };
+      const uLow = username.trim().toLowerCase();
+      const eLow = email ? email.trim().toLowerCase() : '';
 
-      if (email) {
-        const { data: existE } = await sbClient.from('app_users').select('email').ilike('email', email).limit(1);
-        if (existE && existE.length > 0) return { ok: false, message: 'Email sudah terdaftar.' };
+      // Cek username unik
+      const snapU = await fbDb.collection('users').where('username_lower', '==', uLow).limit(1).get();
+      if (!snapU.empty) return { ok: false, message: 'Username sudah dipakai. Pilih username lain.' };
+
+      // Cek email unik
+      if (eLow) {
+        const snapE = await fbDb.collection('users').where('email', '==', eLow).limit(1).get();
+        if (!snapE.empty) return { ok: false, message: 'Email sudah terdaftar.' };
       }
 
-      const { error } = await sbClient.from('app_users').insert([{
-        username: username,
-        email: email || null,
-        password_hash: password,
-        role: 'OPD',
-        satker: satker,
-        status: 'Menunggu'
-      }]);
-      if (error) throw error;
+      let cred;
+      try {
+        cred = await fbAuth.createUserWithEmailAndPassword(eLow || (uLow + '@sistem.pengajuan.local'), password);
+      } catch (e) {
+        if (e.code === 'auth/email-already-in-use') return { ok: false, message: 'Email sudah digunakan.' };
+        if (e.code === 'auth/invalid-email') return { ok: false, message: 'Format email tidak valid.' };
+        throw e;
+      }
+
+      await fbDb.collection('users').doc(cred.user.uid).set({
+        username      : username.trim(),
+        username_lower: uLow,
+        email         : eLow || (uLow + '@sistem.pengajuan.local'),
+        satker        : satker,
+        role          : 'OPD',
+        status        : 'Menunggu',
+        created_at    : firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Sign out — akun menunggu persetujuan admin
+      await fbAuth.signOut();
       return { ok: true, message: 'Pendaftaran berhasil untuk ' + satker + '. Akun akan aktif setelah disetujui Admin.' };
     }
+
+    /* ---- BUAT AKUN OLEH ADMIN (tanpa logout admin) ---- */
     case 'buatAkunAdmin': {
       const [satker, username, email, password, role] = args;
-      const { data: existU } = await sbClient.from('app_users').select('username').ilike('username', username).limit(1);
-      if (existU && existU.length > 0) return { ok: false, message: 'Username sudah digunakan.' };
+      const uLow = username.trim().toLowerCase();
+      const eLow = email ? email.trim().toLowerCase() : (uLow + '@sistem.pengajuan.local');
 
-      const { error } = await sbClient.from('app_users').insert([{
-        username: username,
-        email: email || null,
-        password_hash: password,
-        role: role,
-        satker: satker,
-        status: 'Aktif'
-      }]);
-      if (error) throw error;
+      // Cek username unik
+      const snapU = await fbDb.collection('users').where('username_lower', '==', uLow).limit(1).get();
+      if (!snapU.empty) return { ok: false, message: 'Username sudah digunakan.' };
+
+      // Buat akun via secondary Firebase App agar admin tidak ter-logout
+      const secName = 'sec_' + Date.now();
+      const secApp  = firebase.initializeApp(firebaseConfig, secName);
+      const secAuth = secApp.auth();
+      let newUid;
+      try {
+        const cred = await secAuth.createUserWithEmailAndPassword(eLow, password);
+        newUid = cred.user.uid;
+        await secAuth.signOut();
+      } catch (e) {
+        await secApp.delete();
+        if (e.code === 'auth/email-already-in-use') return { ok: false, message: 'Email sudah digunakan oleh akun lain.' };
+        throw e;
+      }
+      await secApp.delete();
+
+      await fbDb.collection('users').doc(newUid).set({
+        username      : username.trim(),
+        username_lower: uLow,
+        email         : eLow,
+        satker        : satker || '',
+        role          : role,
+        status        : 'Aktif',
+        created_at    : firebase.firestore.FieldValue.serverTimestamp()
+      });
+
       return { ok: true, message: 'Akun ' + role + ' (' + username + ') berhasil dibuat.' };
     }
+
+    /* ---- KELOLA AKUN (admin) ---- */
     case 'getAkun': {
-      const { data, error } = await sbClient.from('app_users').select('username, email, satker, role, status').order('created_at', { ascending: false });
-      if (error) throw error;
-      return { akun: data || [] };
+      const snap = await fbDb.collection('users').orderBy('created_at', 'desc').get();
+      return {
+        akun: snap.docs.map(d => {
+          const x = d.data();
+          return { username: x.username, email: x.email, satker: x.satker, role: x.role, status: x.status };
+        })
+      };
     }
     case 'ubahStatusAkun': {
       const [username, statusBaru] = args;
-      const { error } = await sbClient.from('app_users').update({ status: statusBaru }).eq('username', username);
-      if (error) throw error;
+      const snap = await fbDb.collection('users').where('username_lower', '==', username.toLowerCase()).limit(1).get();
+      if (snap.empty) throw new Error('User tidak ditemukan.');
+      await snap.docs[0].ref.update({ status: statusBaru });
       return { ok: true, message: 'Status akun ' + username + ' diubah menjadi ' + statusBaru + '.' };
     }
+
+    /* ---- CEK KUOTA PENYEDIA ---- */
     case 'cekPenyedia': {
       const [nama, excludeId] = args;
-      const { data, error } = await sbClient.rpc('hitung_total_penyedia', { p_penyedia: nama, p_exclude_id: excludeId || null });
-      if (error) throw error;
-      const r = (data && data[0]) ? data[0] : { total: 0, jumlah: 0 };
-      const nonUmkk = isNonUmkk(nama);
-      return { ok: true, total: Number(r.total), jumlah: Number(r.jumlah), limit: LIMIT, isNonUmkk: nonUmkk };
+      const snap = await fbDb.collection('pengajuan').where('calon_penyedia', '==', nama).get();
+      let total = 0, jumlah = 0;
+      snap.docs.forEach(d => {
+        const p = d.data();
+        if (p.status === 'Ditolak' || p.status === 'Penyedia Ditolak') return;
+        if (excludeId && d.id === excludeId) return;
+        total += Number(p.nilai_hps) || 0;
+        jumlah++;
+      });
+      return { ok: true, total, jumlah, limit: LIMIT, isNonUmkk: isNonUmkk(nama) };
     }
+
+    /* ---- DAFTAR PENGAJUAN ---- */
     case 'getPengajuan': {
       const [opsi] = args;
-      const hal = opsi.halaman || 1, uk = opsi.ukuran || UKURAN_HALAMAN;
-      let q = sbClient.from('pengajuan').select('*', { count: 'exact' });
-      if (isOpd(state.role)) q = q.eq('opd_pengaju', state.satker);
-      if (opsi.status) q = q.eq('status', opsi.status);
-      if (opsi.cari) q = q.or(`nama_paket.ilike.%${opsi.cari}%,calon_penyedia.ilike.%${opsi.cari}%,opd_pengaju.ilike.%${opsi.cari}%,id.ilike.%${opsi.cari}%`);
 
-      const from = (hal - 1) * uk, to = from + uk - 1;
-      const { data, count, error } = await q.order('created_at', { ascending: false }).range(from, to);
-      if (error) throw error;
+      // Ambil semua pengajuan sekaligus (client-side filter — hindari composite index)
+      const snap = await fbDb.collection('pengajuan').orderBy('created_at', 'desc').get();
+      let all = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
 
-      let qR = sbClient.from('pengajuan').select('status, nilai_hps');
-      if (isOpd(state.role)) qR = qR.eq('opd_pengaju', state.satker);
-      const { data: allR } = await qR;
+      // Filter role OPD
+      if (isOpd(state.role)) all = all.filter(p => p.opd_pengaju === state.satker);
+
+      // Hitung ringkasan dari SEMUA data (sebelum filter status/cari)
       const j = { Pending: 0, Revisi: 0, Disetujui: 0, Ditolak: 0 };
       let tot = 0;
-      (allR || []).forEach(x => {
+      all.forEach(x => {
         const st = (x.status === 'Menunggu Verifikasi Tahap 1' || x.status === 'Undangan Klarifikasi' || x.status === 'Menunggu Verifikasi Tahap 2') ? 'Pending'
                  : (x.status === 'Revisi Dokumen') ? 'Revisi'
                  : (x.status === 'Penyedia Ditolak') ? 'Ditolak'
                  : x.status;
         if (j[st] !== undefined) j[st]++;
-        if (x.status !== 'Ditolak' && x.status !== 'Penyedia Ditolak') tot += Number(x.nilai_hps);
+        if (x.status !== 'Ditolak' && x.status !== 'Penyedia Ditolak') tot += Number(x.nilai_hps) || 0;
       });
 
-      const list = (data || []).map(p => {
+      // Filter tampilan
+      let filtered = [...all];
+      if (opsi.status) filtered = filtered.filter(p => p.status === opsi.status);
+      if (opsi.cari) {
+        const q = opsi.cari.toLowerCase();
+        filtered = filtered.filter(p =>
+          (p.nama_paket         || '').toLowerCase().includes(q) ||
+          (p.calon_penyedia     || '').toLowerCase().includes(q) ||
+          (p.opd_pengaju        || '').toLowerCase().includes(q) ||
+          (p._id                || '').toLowerCase().includes(q)
+        );
+      }
+
+      // Pagination sisi klien
+      const hal = opsi.halaman || 1, uk = opsi.ukuran || UKURAN_HALAMAN;
+      const paged = filtered.slice((hal - 1) * uk, hal * uk);
+
+      const list = paged.map(p => {
         const dok = {
           kak: p.dokumen_kak ? p.dokumen_kak.split('|')[1] : null,
           hps: p.dokumen_hps ? p.dokumen_hps.split('|')[1] : null
         };
-        const dokLengkap = !!(dok.kak && dok.hps);
         return {
-          ID_Pengajuan: p.id,
-          Timestamp: new Date(p.created_at).toLocaleString('id-ID'),
-          OPD_Pengaju: p.opd_pengaju,
-          Nama_Paket: p.nama_paket,
-          Calon_Penyedia: p.calon_penyedia,
-          Nilai_HPS: Number(p.nilai_hps),
-          Jenis_Tenaga_Alih_Daya: p.jenis_tenaga_alih_daya,
-          Jumlah_Tenaga: p.jumlah_tenaga,
-          Status: p.status,
-          Tahap: p.tahap || (p.status === 'Menunggu Verifikasi Tahap 2' || p.status === 'Revisi Dokumen' || p.status === 'Disetujui' ? 2 : 1),
-          UndanganKlarifikasi: p.undangan_klarifikasi || null,
-          RiwayatPenyedia: p.riwayat_penyedia || [],
-          VerifikatorTahap1: p.verifikator_tahap1,
-          TglTahap1: p.tgl_verifikasi_tahap1,
-          VerifikatorTahap2: p.verifikator_tahap2,
-          TglTahap2: p.tgl_verifikasi_tahap2,
-          Link_Katalog: p.link_katalog,
-          Catatan_Umum: p.catatan_umum,
-          CatatanItem: p.catatan_item || {},
-          Dok: dok,
-          DokLengkap: dokLengkap,
-          RawDok: { kak: p.dokumen_kak, hps: p.dokumen_hps }
+          ID_Pengajuan           : p._id,
+          Timestamp              : tsToStr(p.created_at),
+          OPD_Pengaju            : p.opd_pengaju,
+          Nama_Paket             : p.nama_paket,
+          Calon_Penyedia         : p.calon_penyedia,
+          Nilai_HPS              : Number(p.nilai_hps),
+          Jenis_Tenaga_Alih_Daya : p.jenis_tenaga_alih_daya,
+          Jumlah_Tenaga          : p.jumlah_tenaga,
+          Status                 : p.status,
+          Tahap                  : p.tahap || 1,
+          UndanganKlarifikasi    : p.undangan_klarifikasi || null,
+          RiwayatPenyedia        : p.riwayat_penyedia || [],
+          VerifikatorTahap1      : p.verifikator_tahap1,
+          TglTahap1              : p.tgl_verifikasi_tahap1,
+          VerifikatorTahap2      : p.verifikator_tahap2,
+          TglTahap2              : p.tgl_verifikasi_tahap2,
+          Link_Katalog           : p.link_katalog,
+          Catatan_Umum           : p.catatan_umum,
+          CatatanItem            : p.catatan_item || {},
+          Dok                    : dok,
+          DokLengkap             : !!(dok.kak && dok.hps),
+          RawDok                 : { kak: p.dokumen_kak, hps: p.dokumen_hps }
         };
       });
 
-      return { list, total: count || 0, halaman: hal, ukuran: uk, ringkasan: { total: tot, limit: LIMIT, jumlah: j } };
+      return { list, total: filtered.length, halaman: hal, ukuran: uk, ringkasan: { total: tot, limit: LIMIT, jumlah: j } };
     }
+
+    /* ---- AKUMULASI PER PENYEDIA ---- */
     case 'getPenyedia': {
-      const { data, error } = await sbClient.from('pengajuan').select('calon_penyedia, nilai_hps, opd_pengaju, status');
-      if (error) throw error;
+      const snap = await fbDb.collection('pengajuan').get();
       const peta = {};
-      (data || []).forEach(r => {
+      snap.docs.forEach(d => {
+        const r = d.data();
         if (r.status === 'Ditolak' || r.status === 'Penyedia Ditolak') return;
-        const k = r.calon_penyedia.trim();
+        const k = (r.calon_penyedia || '').trim();
+        if (!k) return;
         if (!peta[k]) peta[k] = { nama: k, total: 0, jumlah: 0, opd: new Set(), isNonUmkk: isNonUmkk(k) };
-        peta[k].total += Number(r.nilai_hps);
+        peta[k].total += Number(r.nilai_hps) || 0;
         peta[k].jumlah++;
         peta[k].opd.add(r.opd_pengaju);
       });
-      const penyedia = Object.values(peta).map(p => ({
-        nama: p.nama, total: p.total, jumlah: p.jumlah, opd: Array.from(p.opd), isNonUmkk: p.isNonUmkk
-      })).sort((a,b) => b.total - a.total);
-      return { penyedia };
+      return {
+        penyedia: Object.values(peta).map(p => ({
+          nama: p.nama, total: p.total, jumlah: p.jumlah, opd: Array.from(p.opd), isNonUmkk: p.isNonUmkk
+        })).sort((a, b) => b.total - a.total)
+      };
     }
+
     case 'getDetailPenyedia': {
       const [nama] = args;
-      const { data, error } = await sbClient.from('pengajuan').select('*').eq('calon_penyedia', nama).order('created_at', { ascending: false });
-      if (error) throw error;
+      const snap = await fbDb.collection('pengajuan').where('calon_penyedia', '==', nama)
+        .orderBy('created_at', 'desc').get();
       let total = 0, jumlah = 0;
-      const list = (data || []).map(p => {
+      const list = snap.docs.map(d => {
+        const p = d.data();
         const dihitung = p.status !== 'Ditolak' && p.status !== 'Penyedia Ditolak';
-        if (dihitung) { total += Number(p.nilai_hps); jumlah++; }
+        if (dihitung) { total += Number(p.nilai_hps) || 0; jumlah++; }
         return {
-          ID_Pengajuan: p.id,
-          Timestamp: new Date(p.created_at).toLocaleString('id-ID'),
-          OPD_Pengaju: p.opd_pengaju,
-          Nama_Paket: p.nama_paket,
-          Calon_Penyedia: p.calon_penyedia,
-          Nilai_HPS: Number(p.nilai_hps),
-          Jenis_Tenaga_Alih_Daya: p.jenis_tenaga_alih_daya,
-          Jumlah_Tenaga: p.jumlah_tenaga,
-          Status: p.status,
-          Link_Katalog: p.link_katalog,
-          DokLengkap: !!(p.dokumen_kak && p.dokumen_hps),
-          dihitung: dihitung
+          ID_Pengajuan           : d.id,
+          Timestamp              : tsToStr(p.created_at),
+          OPD_Pengaju            : p.opd_pengaju,
+          Nama_Paket             : p.nama_paket,
+          Calon_Penyedia         : p.calon_penyedia,
+          Nilai_HPS              : Number(p.nilai_hps),
+          Jenis_Tenaga_Alih_Daya : p.jenis_tenaga_alih_daya,
+          Jumlah_Tenaga          : p.jumlah_tenaga,
+          Status                 : p.status,
+          Link_Katalog           : p.link_katalog,
+          DokLengkap             : !!(p.dokumen_kak && p.dokumen_hps),
+          dihitung
         };
       });
       return { ok: true, nama, total, jumlah, limit: LIMIT, isNonUmkk: isNonUmkk(nama), list };
     }
+
+    /* ---- SUBMIT PENGAJUAN BARU ---- */
     case 'submitPengajuan': {
       const [d] = args;
-      let newId = null;
-      try {
-        const { data: idData, error: idErr } = await sbClient.rpc('buat_id_pengajuan');
-        if (!idErr && idData) newId = idData;
-      } catch (e) {
-        console.warn('Fallback ID generator:', e);
-      }
-      if (!newId) {
-        const tgl = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        newId = 'PGJ-' + tgl + '-' + Math.floor(1000 + Math.random() * 9000);
-      }
+      const tgl   = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const newId = 'PGJ-' + tgl + '-' + Math.floor(1000 + Math.random() * 9000);
 
-      const { error } = await sbClient.from('pengajuan').insert([{
-        id: newId,
-        opd_pengaju: state.satker,
-        nama_paket: d.nama,
-        calon_penyedia: d.penyedia,
-        nilai_hps: d.nilai,
+      await fbDb.collection('pengajuan').doc(newId).set({
+        opd_pengaju           : state.satker,
+        nama_paket            : d.nama,
+        calon_penyedia        : d.penyedia,
+        nilai_hps             : d.nilai,
         jenis_tenaga_alih_daya: d.jenis,
-        jumlah_tenaga: d.jumlah,
-        link_katalog: d.link || null,
-        status: 'Menunggu Verifikasi Tahap 1',
-        tahap: 1
-      }]);
-      if (error) throw error;
+        jumlah_tenaga         : d.jumlah,
+        link_katalog          : d.link || null,
+        status                : 'Menunggu Verifikasi Tahap 1',
+        tahap                 : 1,
+        created_at            : firebase.firestore.FieldValue.serverTimestamp()
+      });
+
       return { ok: true, id: newId, message: 'Pengajuan ' + newId + ' berhasil dikirim ke Verifikasi Tahap 1 (Admin).' };
     }
+
+    /* ---- GANTI PENYEDIA (OPD) ---- */
     case 'gantiPenyediaOpd': {
       const [id, penyediaBaru, hpsBaru, catatan] = args;
-      const { data: listLama, error: errLama } = await sbClient.from('pengajuan').select('*').eq('id', id).limit(1);
-      const lama = (listLama && listLama.length > 0) ? listLama[0] : null;
-      if (!lama) throw new Error('Pengajuan tidak ditemukan.');
+      const ref  = fbDb.collection('pengajuan').doc(id);
+      const snap = await ref.get();
+      if (!snap.exists) throw new Error('Pengajuan tidak ditemukan.');
 
+      const lama    = snap.data();
       const riwayat = lama.riwayat_penyedia || [];
       riwayat.push({
-        penyedia_lama: lama.calon_penyedia,
-        hps_lama: lama.nilai_hps,
+        penyedia_lama: lama.calon_penyedia, hps_lama: lama.nilai_hps,
         tanggal: new Date().toISOString(),
         alasan: catatan || 'Penggantian penyedia setelah verifikasi Tahap 1'
       });
 
-      const { error } = await sbClient.from('pengajuan').update({
-        calon_penyedia: penyediaBaru,
-        nilai_hps: hpsBaru || lama.nilai_hps,
-        status: 'Menunggu Verifikasi Tahap 1',
-        tahap: 1,
-        riwayat_penyedia: riwayat
-      }).eq('id', id);
-      if (error) throw error;
+      await ref.update({ calon_penyedia: penyediaBaru, nilai_hps: hpsBaru || lama.nilai_hps,
+        status: 'Menunggu Verifikasi Tahap 1', tahap: 1, riwayat_penyedia: riwayat });
 
-      await sbClient.from('klarifikasi').insert([{
-        id_pengajuan: id,
-        pengirim: state.username,
-        role: state.role,
-        pesan: '[Ganti Penyedia] OPD telah mengganti penyedia menjadi "' + penyediaBaru + '" (HPS: ' + rp(hpsBaru || lama.nilai_hps) + '). ' + (catatan ? 'Catatan: ' + catatan : '')
-      }]);
+      await ref.collection('klarifikasi').add({
+        pengirim: state.username, role: state.role, created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        pesan: '[Ganti Penyedia] OPD mengganti penyedia menjadi "' + penyediaBaru + '" (HPS: ' + rp(hpsBaru || lama.nilai_hps) + '). ' + (catatan ? 'Catatan: ' + catatan : '')
+      });
 
       return { ok: true, message: 'Penyedia berhasil diganti dan diajukan kembali ke Verifikasi Tahap 1.' };
     }
+
+    /* ---- UNDANGAN KLARIFIKASI ---- */
     case 'kirimUndanganKlarifikasi': {
-      const [id, dataUndangan] = args;
-      const { error } = await sbClient.from('pengajuan').update({
-        status: 'Undangan Klarifikasi',
-        undangan_klarifikasi: dataUndangan
-      }).eq('id', id);
-      if (error) throw error;
+      const [id, du] = args;
+      const ref = fbDb.collection('pengajuan').doc(id);
+      await ref.update({ status: 'Undangan Klarifikasi', undangan_klarifikasi: du });
 
-      const teksUndangan = '📋 [UNDANGAN KLARIFIKASI]\n' +
-        'Nomor: ' + (dataUndangan.nomor || '-') + '\n' +
-        'Hari/Tanggal: ' + dataUndangan.tanggal + '\n' +
-        'Pukul: ' + dataUndangan.waktu + ' WIB\n' +
-        'Tempat/Media: ' + dataUndangan.tempat + '\n' +
-        'Agenda: ' + dataUndangan.agenda + '\n' +
-        (dataUndangan.catatan ? 'Catatan: ' + dataUndangan.catatan : '');
+      const teks = '📋 [UNDANGAN KLARIFIKASI]\n' +
+        'Nomor: ' + (du.nomor || '-') + '\nHari/Tanggal: ' + du.tanggal +
+        '\nPukul: ' + du.waktu + ' WIB\nTempat/Media: ' + du.tempat +
+        '\nAgenda: ' + du.agenda + (du.catatan ? '\nCatatan: ' + du.catatan : '');
 
-      await sbClient.from('klarifikasi').insert([{
-        id_pengajuan: id,
-        pengirim: state.username,
-        role: state.role,
-        pesan: teksUndangan
-      }]);
-
+      await ref.collection('klarifikasi').add({
+        pengirim: state.username, role: state.role, pesan: teks,
+        created_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
       return { ok: true, message: 'Undangan klarifikasi berhasil dikirimkan ke OPD.' };
     }
+
+    /* ---- REVISI PENGAJUAN ---- */
     case 'revisiPengajuan': {
       const [id, d] = args;
-      const { error } = await sbClient.from('pengajuan').update({
-        nama_paket: d.nama,
-        calon_penyedia: d.penyedia,
-        nilai_hps: d.nilai,
-        jenis_tenaga_alih_daya: d.jenis,
-        jumlah_tenaga: d.jumlah,
-        link_katalog: d.link,
-        status: 'Menunggu Verifikasi Tahap 1',
-        catatan_umum: '',
-        catatan_item: {}
-      }).eq('id', id);
-      if (error) throw error;
+      await fbDb.collection('pengajuan').doc(id).update({
+        nama_paket: d.nama, calon_penyedia: d.penyedia, nilai_hps: d.nilai,
+        jenis_tenaga_alih_daya: d.jenis, jumlah_tenaga: d.jumlah, link_katalog: d.link,
+        status: 'Menunggu Verifikasi Tahap 1', catatan_umum: '', catatan_item: {}
+      });
       return { ok: true, message: 'Revisi pengajuan ' + id + ' berhasil dikirim ulang.' };
     }
+
+    /* ---- UBAH STATUS (Admin / Pokja) ---- */
     case 'ubahStatus': {
       const [id, statusBaru, catatan, items] = args;
+      const ref = fbDb.collection('pengajuan').doc(id);
+
       const updateData = {
-        status: statusBaru,
+        status      : statusBaru,
         catatan_umum: statusBaru === 'Disetujui' ? '' : catatan,
         catatan_item: items || {}
       };
-
       if (statusBaru === 'Menunggu Verifikasi Tahap 2') {
         updateData.tahap = 2;
         updateData.verifikator_tahap1 = state.username;
@@ -1259,101 +1373,66 @@ const api = async (fn, ...args) => {
         updateData.tgl_verifikasi_tahap2 = new Date().toISOString();
       }
 
-      const { error } = await sbClient.from('pengajuan').update(updateData).eq('id', id);
-      if (error) throw error;
+      await ref.update(updateData);
 
       let pesan = '[Status: ' + statusBaru + ']' + (catatan ? ' ' + catatan : '');
       Object.keys(ITEM_TOLAK).forEach(k => { if (items[k]) pesan += '\n- ' + ITEM_TOLAK[k] + ': ' + items[k]; });
 
-      await sbClient.from('klarifikasi').insert([{
-        id_pengajuan: id,
-        pengirim: state.username,
-        role: state.role,
-        pesan: pesan
-      }]);
+      await ref.collection('klarifikasi').add({
+        pengirim: state.username, role: state.role, pesan,
+        created_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
       return { ok: true, message: 'Status ' + id + ' diubah menjadi ' + statusBaru + '.' };
     }
+
+    /* ---- KLARIFIKASI / CHAT ---- */
     case 'getKlarifikasi': {
       const [id] = args;
-      const { data, error } = await sbClient.from('klarifikasi').select('*').eq('id_pengajuan', id).order('created_at', { ascending: true });
-      if (error) throw error;
-      const pesan = (data || []).map(m => ({
-        waktu: new Date(m.created_at).toLocaleString('id-ID'),
-        pengirim: m.pengirim,
-        role: m.role || '',
-        pesan: m.pesan,
-        milikSaya: m.pengirim === state.username
-      }));
-      return { ok: true, pesan };
+      const snap = await fbDb.collection('pengajuan').doc(id).collection('klarifikasi')
+        .orderBy('created_at', 'asc').get();
+      return {
+        ok: true,
+        pesan: snap.docs.map(d => {
+          const m = d.data();
+          return { waktu: tsToStr(m.created_at), pengirim: m.pengirim, role: m.role || '', pesan: m.pesan, milikSaya: m.pengirim === state.username };
+        })
+      };
     }
     case 'kirimKlarifikasi': {
       const [id, teks] = args;
-      const { error } = await sbClient.from('klarifikasi').insert([{
-        id_pengajuan: id,
-        pengirim: state.username,
-        role: state.role,
-        pesan: teks
-      }]);
-      if (error) throw error;
+      await fbDb.collection('pengajuan').doc(id).collection('klarifikasi').add({
+        pengirim: state.username, role: state.role, pesan: teks,
+        created_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
       return { ok: true };
     }
+
+    /* ---- DOKUMEN (Google Drive link) ---- */
     case 'unggahDokumen': {
-      const [id, jenis, namaFile, file] = args;
-      const extMatch = String(namaFile || '').match(/\.([^.]+)$/);
-      const ext = extMatch ? extMatch[1].toLowerCase() : 'pdf';
-      const rawBase = extMatch ? namaFile.slice(0, -extMatch[0].length) : namaFile;
-      const cleanBase = rawBase.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').substring(0, 40);
-      const cleanName = `${cleanBase}.${ext}`;
-      const storagePath = `${id}/${jenis}_${cleanName}`;
-
-      const { error: upErr } = await sbClient.storage.from('dokumen-pengajuan').upload(storagePath, file, {
-        upsert: true,
-        contentType: file.type || 'application/octet-stream'
-      });
-      if (upErr) {
-        console.error('Storage Upload Error:', upErr);
-        throw new Error('Gagal unggah ke Supabase Storage (' + (upErr.message || 'Error') + ').');
-      }
-
-      const colName = 'dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis);
-      const updateData = {};
-      updateData[colName] = `${storagePath}|${namaFile}`;
-
-      const { error: dbErr } = await sbClient.from('pengajuan').update(updateData).eq('id', id);
-      if (dbErr) throw dbErr;
-      return { ok: true, nama: cleanName };
+      // Firebase Storage tidak aktif (paket Spark gratis)
+      // Gunakan tautan Google Drive via tautanDokumen
+      return { ok: false, message: 'Upload berkas langsung tidak tersedia. Gunakan tautan Google Drive di bawah.' };
     }
     case 'tautanDokumen': {
       const [id, jenis, tautan] = args;
-      const colName = 'dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis);
-      const updateData = {};
-      updateData[colName] = `link:${tautan}|Tautan Google Drive`;
-      const { error } = await sbClient.from('pengajuan').update(updateData).eq('id', id);
-      if (error) throw error;
+      const col  = 'dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis);
+      const upd  = {}; upd[col] = 'link:' + tautan + '|Tautan Google Drive';
+      await fbDb.collection('pengajuan').doc(id).update(upd);
       return { ok: true, nama: 'Tautan Google Drive' };
     }
     case 'unduhDokumen': {
       const [id, jenis] = args;
-      const { data: listP, error } = await sbClient.from('pengajuan').select('*').eq('id', id).limit(1);
-      if (error || !listP || !listP.length) return { ok: false, message: 'Pengajuan tidak ditemukan.' };
-      const data = listP[0];
-      const raw = data['dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis)];
+      const snap = await fbDb.collection('pengajuan').doc(id).get();
+      if (!snap.exists) return { ok: false, message: 'Pengajuan tidak ditemukan.' };
+      const col  = 'dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis);
+      const raw  = snap.data()[col];
       if (!raw) return { ok: false, message: 'Dokumen belum ada.' };
-
-      const parts = raw.split('|');
-      const pathOrLink = parts[0];
-      if (pathOrLink.startsWith('link:')) {
-        window.open(pathOrLink.substring(5), '_blank');
-        return { ok: true };
-      }
-
-      const { data: urlData } = sbClient.storage.from('dokumen-pengajuan').getPublicUrl(pathOrLink);
-      if (urlData && urlData.publicUrl) {
-        window.open(urlData.publicUrl, '_blank');
-        return { ok: true };
-      }
-      return { ok: false, message: 'URL berkas tidak dapat dibuka.' };
+      const link = raw.split('|')[0];
+      if (link.startsWith('link:')) { window.open(link.substring(5), '_blank'); return { ok: true }; }
+      return { ok: false, message: 'Format dokumen tidak dikenali.' };
     }
+
     default:
       throw new Error('Fungsi ' + fn + ' belum diimplementasikan.');
   }
@@ -1401,22 +1480,24 @@ $('#btnKeLupa').addEventListener('click', () => {
 });
 $('#btnLupaKeMasuk').addEventListener('click', () => { tampilFormMasuk('login'); $('#inUser').focus(); });
 
-// Reset Password Handlers
+// Reset Password — Firebase mengirim link ke email (tidak ada OTP)
 $('#btnKirimOtp').addEventListener('click', async () => {
   const email = $('#lupaEmail').value.trim();
   const box = $('#lupaMsg');
   if (!email) { box.className = 'alert py-2 small alert-danger'; box.textContent = 'Masukkan email terdaftar Anda.'; box.style.display = ''; return; }
-  const btn = $('#btnKirimOtp'); busy(btn, true, 'Memeriksa Email');
+  const btn = $('#btnKirimOtp'); busy(btn, true, 'Mengirim Email');
   try {
     const res = await api('mintaResetPassword', email);
-    if (!res.ok) { box.className = 'alert py-2 small alert-danger'; box.textContent = res.message; box.style.display = ''; return; }
-    box.className = 'alert py-2 small alert-success';
-    box.innerHTML = 'Kode verifikasi berhasil dibuat! ' + (res.token ? '<br>Kode verifikasi Anda: <b>' + res.token + '</b>' : 'Silakan periksa email.');
+    box.className = 'alert py-2 small alert-' + (res.ok ? 'success' : 'danger');
+    box.innerHTML = res.ok
+      ? '<i class="bi bi-envelope-check-fill me-1"></i>' + esc(res.message)
+      : esc(res.message);
     box.style.display = '';
-    if (res.token) $('#lupaToken').value = res.token;
-    $('#lupaStep1').style.display = 'none';
-    $('#lupaStep2').style.display = '';
-    $('#lupaPassBaru').focus();
+    if (res.ok) {
+      // Sembunyikan form, tampilkan pesan sukses saja
+      $('#lupaStep1').style.display = 'none';
+      $('#lupaStep2').style.display = 'none';
+    }
   } catch (err) { gagal(err); }
   finally { busy(btn, false); }
 });
@@ -1502,7 +1583,7 @@ $('#loginForm').addEventListener('submit', async e => {
   const btn = $('#btnLogin'); busy(btn, true, 'Memeriksa');
   try {
     const r = await api('login', $('#inUser').value, $('#inPass').value);
-    if (!r.ok) { pesanLogin(r.message, false); return; }
+    if (!r || !r.ok) { pesanLogin((r && r.message) || 'Username/email atau password salah.', false); return; }
     store.setItem(SESSION_KEY, JSON.stringify({ username: r.username, role: r.role, satker: r.satker, email: r.email }));
     $('#inPass').value = '';
     mulaiSesi(r);
@@ -2036,9 +2117,8 @@ function renderKertasKerjaHtml(d) {
     '<!-- KOP SURAT PEMKOT SURAKARTA -->' +
     '<div class="text-center pb-2 mb-3" style="border-bottom: 3px double #000;">' +
       '<div class="fw-bold text-uppercase" style="font-size: 15pt; letter-spacing: 1.5px; line-height: 1.2;">PEMERINTAH KOTA SURAKARTA</div>' +
-      '<div class="fw-bold text-uppercase" style="font-size: 13pt; line-height: 1.2;">SEKRETARIAT DAERAH</div>' +
-      '<div class="fw-bold text-uppercase" style="font-size: 11pt; letter-spacing: .5px;">BAGIAN PENGADAAN BARANG DAN JASA</div>' +
-      '<div style="font-size: 8.5pt; color: #444;">Jl. Jenderal Sudirman No. 2, Surakarta, Jawa Tengah 57111 &bull; Telp. (0271) 642020</div>' +
+      '<div class="fw-bold text-uppercase" style="font-size: 13pt; line-height: 1.3;">' + esc(satkerNama.toUpperCase()) + '</div>' +
+      '<div style="font-size: 8.5pt; color: #444;">Kota Surakarta, Jawa Tengah 57111</div>' +
     '</div>' +
 
     '<!-- JUDUL DOKUMEN -->' +
@@ -2130,16 +2210,16 @@ function renderKertasKerjaHtml(d) {
     '<div class="row text-center mt-4 pt-2" style="font-size: 9.5pt; page-break-inside: avoid;">' +
       '<div class="col-6">' +
         '<div>Mengetahui / Memeriksa,</div>' +
-        '<div class="fw-bold">Bagian Pengadaan Barang dan Jasa</div>' +
-        '<div class="small text-muted">Sekretariat Daerah Kota Surakarta</div>' +
+        '<div class="fw-bold">Tim Verifikator BPBJ</div>' +
+        '<div class="small text-muted">Bagian Pengadaan Barang dan Jasa, Setda Surakarta</div>' +
         '<div style="height: 65px;"></div>' +
-        '<div class="fw-bold text-decoration-underline">( Tim Verifikator BPBJ )</div>' +
-        '<div class="small text-muted">Admin / Pokja Pemilihan</div>' +
+        '<div class="fw-bold text-decoration-underline">( ..................................................... )</div>' +
+        '<div class="small text-muted">Admin / Pokja Pemilihan BPBJ</div>' +
       '</div>' +
       '<div class="col-6">' +
         '<div>Surakarta, ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) + '</div>' +
         '<div class="fw-bold">Pejabat Pembuat Komitmen (PPK)</div>' +
-        '<div class="small text-muted">' + esc(satkerNama) + '</div>' +
+        '<div class="small text-muted fw-semibold text-uppercase">' + esc(satkerNama) + '</div>' +
         '<div style="height: 65px;"></div>' +
         '<div class="fw-bold text-decoration-underline">( .................................................... )</div>' +
         '<div class="small text-muted">NIP. ....................................................</div>' +
@@ -2576,17 +2656,14 @@ function bukaKlarifikasi(id) {
   bootstrap.Modal.getOrCreateInstance($('#modalKlarif')).show();
   muatKlarifikasi();
 
-  if (state.klarSub) state.klarSub.unsubscribe();
-  state.klarSub = sbClient
-    .channel('klarifikasi_' + id)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'klarifikasi', filter: 'id_pengajuan=eq.' + id }, payload => {
-      muatKlarifikasi();
-    })
-    .subscribe();
+  if (state.klarSub) state.klarSub(); // unsubscribe Firestore listener
+  state.klarSub = fbDb.collection('pengajuan').doc(id).collection('klarifikasi')
+    .orderBy('created_at', 'asc')
+    .onSnapshot(() => { muatKlarifikasi(); });
 }
 
 $('#modalKlarif').addEventListener('hidden.bs.modal', () => {
-  if (state.klarSub) { state.klarSub.unsubscribe(); state.klarSub = null; }
+  if (state.klarSub) { state.klarSub(); state.klarSub = null; } // panggil fungsi unsubscribe Firestore
   state.klarId = null;
 });
 
