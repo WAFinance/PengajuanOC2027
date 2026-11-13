@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Setup Awal Firebase — Pengajuan Alih Daya</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    body { background: #0f172a; color: #f1f5f9; font-family: system-ui, sans-serif; padding: 2rem 1rem; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 1.5rem; margin-bottom: 1.2rem; }
+    .log-box { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 1rem;
+      font-family: monospace; font-size: .82rem; max-height: 400px; overflow-y: auto; }
+    .log-ok   { color: #34d399; }
+    .log-warn { color: #fbbf24; }
+    .log-err  { color: #f87171; }
+    .log-info { color: #94a3b8; }
+    h1 { font-size: 1.5rem; font-weight: 800; }
+    .btn-go { background: #f59e0b; color: #1b1202; font-weight: 700; border: none;
+      border-radius: 10px; padding: .65rem 2rem; font-size: 1rem; }
+    .btn-go:hover { background: #d97706; }
+    .btn-go:disabled { opacity: .5; cursor: not-allowed; }
+    .step-badge { display: inline-block; background: #334155; color: #94a3b8;
+      border-radius: 999px; font-size: .75rem; font-weight: 700; padding: .2rem .7rem; margin-right: .4rem; }
+    .step-badge.done { background: rgba(52,211,153,.2); color: #34d399; }
+    .step-badge.err  { background: rgba(248,113,113,.2); color: #f87171; }
+    progress { width: 100%; border-radius: 999px; height: 8px; }
+    progress::-webkit-progress-bar   { background: #334155; border-radius: 999px; }
+    progress::-webkit-progress-value { background: #f59e0b; border-radius: 999px; }
+  </style>
+</head>
+<body>
+<div style="max-width: 720px; margin: 0 auto;">
+
+  <div class="mb-4">
+    <div style="font-size: .85rem; color: #64748b; margin-bottom: .3rem;">🔧 Inisialisasi Firebase</div>
+    <h1>Setup Awal Data Firestore</h1>
+    <p style="color: #94a3b8;">File ini membuat semua koleksi referensi dan akun admin pertama secara otomatis.
+      Cukup dijalankan <b>sekali saja</b>.</p>
+  </div>
+
+  <!-- STEP 1: Akun Admin -->
+  <div class="card">
+    <h5 class="mb-3"><span class="step-badge" id="b1">1</span>Akun Admin Pertama</h5>
+    <p class="small" style="color:#94a3b8;">Isi data admin yang akan dibuat. Pastikan email belum pernah didaftarkan di Firebase Auth.</p>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label small fw-bold" style="color:#94a3b8;">Email Admin</label>
+        <input class="form-control" id="adminEmail" value="admin@pengajuan.go.id" style="background:#0f172a;border-color:#334155;color:#f1f5f9;">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small fw-bold" style="color:#94a3b8;">Password Admin</label>
+        <input class="form-control" id="adminPass" type="password" placeholder="Minimal 6 karakter" style="background:#0f172a;border-color:#334155;color:#f1f5f9;">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small fw-bold" style="color:#94a3b8;">Username Admin</label>
+        <input class="form-control" id="adminUser" value="admin_oc" style="background:#0f172a;border-color:#334155;color:#f1f5f9;">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small fw-bold" style="color:#94a3b8;">Satker Admin</label>
+        <input class="form-control" id="adminSatker" value="Bagian Pengadaan Barang dan Jasa" style="background:#0f172a;border-color:#334155;color:#f1f5f9;">
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Referensi -->
+  <div class="card">
+    <h5 class="mb-1"><span class="step-badge" id="b2">2</span>Data Referensi Otomatis</h5>
+    <p class="small" style="color:#94a3b8;" class="mb-0">Koleksi berikut akan dibuat otomatis dari data bawaan:</p>
+    <ul class="small mt-2" style="color:#64748b;">
+      <li><b style="color:#f1f5f9;">referensi_satker</b> — 34 OPD Kota Surakarta</li>
+      <li><b style="color:#f1f5f9;">referensi_jenis_tenaga</b> — 15 jenis tenaga alih daya</li>
+      <li><b style="color:#f1f5f9;">referensi_penyedia</b> — 4 Non UMKK + slot kosong untuk tambah manual</li>
+    </ul>
+  </div>
+
+  <!-- Tombol Jalankan -->
+  <div class="text-center mb-4">
+    <button class="btn-go" id="btnRun" onclick="jalankan()">
+      <i class="bi bi-lightning-charge-fill me-2"></i>Jalankan Setup Sekarang
+    </button>
+  </div>
+
+  <!-- Progress -->
+  <div id="progWrap" style="display:none;" class="card">
+    <div class="d-flex justify-content-between mb-2">
+      <div class="small fw-bold" id="progLabel">Menyiapkan...</div>
+      <div class="small" id="progPct" style="color:#94a3b8;">0%</div>
+    </div>
+    <progress id="progBar" value="0" max="100"></progress>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">Log</h6>
+      <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('logBox').innerHTML=''">Bersihkan</button>
+    </div>
+    <div class="log-box" id="logBox">
+      <div class="log-info">Siap. Isi data admin lalu klik "Jalankan Setup Sekarang".</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =====================================================================
+ *  FIREBASE CONFIG
+ * ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDqOhN3rVfN3vOLePJQTy4Il7GEGe2rjXY",
+  authDomain: "pengajuanoc2027-ff269.firebaseapp.com",
+  projectId: "pengajuanoc2027-ff269",
+  storageBucket: "pengajuanoc2027-ff269.firebasestorage.app",
+  messagingSenderId: "64141738061",
+  appId: "1:64141738061:web:ba05726475ab8b482f5c04"
+};
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const fbDb   = firebase.firestore();
+
+/* =====================================================================
+ *  DATA REFERENSI
+ * ===================================================================== */
+const SATKER_LIST = [
+  "Badan Kepegawaian dan Pengembangan Sumber Daya Manusia",
+  "Badan Kesatuan Bangsa dan Politik",
+  "Badan Penanggulangan Bencana Daerah",
+  "Badan Pendapatan Daerah",
+  "Badan Pengelolaan Keuangan dan Aset Daerah",
+  "Badan Perencanaan Pembangunan Daerah",
+  "Badan Riset dan Inovasi Daerah",
+  "Bagian Administrasi Pembangunan",
+  "Bagian Hukum",
+  "Bagian Kesejahteraan Rakyat",
+  "Bagian Organisasi",
+  "Bagian Pengadaan Barang dan Jasa",
+  "Bagian Perekonomian dan Sumber Daya Alam",
+  "Bagian Protokol, Komunikasi dan Administrasi Pimpinan",
+  "Bagian Tata Pemerintahan",
+  "Bagian Umum",
+  "Dinas Kebudayaan dan Pariwisata",
+  "Dinas Kepemudaan dan Olahraga",
+  "Dinas Kependudukan dan Pencatatan Sipil",
+  "Dinas Kesehatan",
+  "Dinas Ketahanan Pangan dan Pertanian",
+  "Dinas Komunikasi, Informatika, Statistik dan Persandian",
+  "Dinas Koperasi Usaha Kecil dan Menengah dan Perindustrian",
+  "Dinas Lingkungan Hidup",
+  "Dinas Pekerjaan Umum dan Penataan Ruang",
+  "Dinas Pemadam Kebakaran",
+  "Dinas Pemberdayaan Perempuan dan Pelindungan Anak serta Pengendalian Penduduk dan Keluarga Berencana",
+  "Dinas Penanaman Modal dan Pelayanan Terpadu Satu Pintu",
+  "Dinas Pendidikan",
+  "Dinas Perdagangan",
+  "Dinas Perhubungan",
+  "Dinas Perpustakaan dan Kearsipan",
+  "Dinas Perumahan, dan Kawasan Permukiman serta Pertanahan",
+  "Dinas Sosial",
+  "Dinas Tenaga Kerja",
+  "Inspektorat",
+  "RSUD Bung Karno",
+  "RSUD Ibu Fatmawati Soekarno",
+  "Satuan Polisi Pamong Praja",
+  "Sekretariat Daerah",
+  "Sekretariat Dewan Perwakilan Rakyat Daerah"
+];
+
+const JENIS_TENAGA_LIST = [
+  "Tenaga Kebersihan (Cleaning Service)",
+  "Tenaga Keamanan (Security / Satpam)",
+  "Tenaga Pengemudi",
+  "Tenaga Administrasi / Perkantoran",
+  "Tenaga Pramubakti",
+  "Tenaga Kurir / Caraka",
+  "Tenaga Teknisi Listrik / Mekanikal",
+  "Tenaga IT / Operator Komputer",
+  "Tenaga Resepsionis / Front Office",
+  "Tenaga Arsip / Kearsipan",
+  "Tenaga Perpustakaan",
+  "Tenaga Kesehatan / Paramedis",
+  "Tenaga Juru Masak / Dapur",
+  "Tenaga Petugas Parkir",
+  "Tenaga Pemeliharaan Taman / Kebun"
+];
+
+const PENYEDIA_LIST = [
+  { nama: "Perumda PAU Pedaringan Kota Surakarta", kategori: "Non UMKK" },
+  { nama: "PT Bintang Mitra Pratama",               kategori: "Non UMKK" },
+  { nama: "PT Jaya Wira Manggala",                  kategori: "Non UMKK" },
+  { nama: "PT Muhandas Permata Sarana",             kategori: "Non UMKK" }
+];
+
+/* =====================================================================
+ *  HELPER LOG & PROGRESS
+ * ===================================================================== */
+let totalSteps = 0, doneSteps = 0;
+function log(msg, type = 'info') {
+  const box = document.getElementById('logBox');
+  const el = document.createElement('div');
+  el.className = 'log-' + type;
+  el.textContent = new Date().toLocaleTimeString('id-ID') + '  ' + msg;
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+function setProgress(label, pct) {
+  document.getElementById('progWrap').style.display = '';
+  document.getElementById('progLabel').textContent = label;
+  document.getElementById('progPct').textContent = Math.round(pct) + '%';
+  document.getElementById('progBar').value = pct;
+}
+function setBadge(id, state) {
+  const el = document.getElementById(id);
+  el.className = 'step-badge ' + state;
+  if (state === 'done') el.textContent = '✓';
+  if (state === 'err')  el.textContent = '✗';
+}
+
+/* =====================================================================
+ *  BATCH INSERT HELPER
+ * ===================================================================== */
+async function batchInsert(collection, items, fieldName) {
+  // Firestore batch max 500 ops
+  const batches = [];
+  let batch = fbDb.batch();
+  let count = 0;
+  for (const item of items) {
+    const ref = fbDb.collection(collection).doc();
+    const data = typeof item === 'string' ? { nama: item } : item;
+    batch.set(ref, data);
+    count++;
+    if (count === 499) {
+      batches.push(batch);
+      batch = fbDb.batch();
+      count = 0;
+    }
+  }
+  if (count > 0) batches.push(batch);
+  for (const b of batches) await b.commit();
+}
+
+/* =====================================================================
+ *  MAIN: JALANKAN SETUP
+ * ===================================================================== */
+async function jalankan() {
+  const btn = document.getElementById('btnRun');
+  btn.disabled = true;
+  btn.textContent = 'Memproses...';
+
+  const email  = document.getElementById('adminEmail').value.trim();
+  const pass   = document.getElementById('adminPass').value;
+  const uname  = document.getElementById('adminUser').value.trim();
+  const satker = document.getElementById('adminSatker').value.trim();
+
+  if (!email || !pass || !uname || !satker) {
+    alert('Lengkapi semua data admin terlebih dahulu!');
+    btn.disabled = false;
+    btn.textContent = 'Jalankan Setup Sekarang';
+    return;
+  }
+  if (pass.length < 6) {
+    alert('Password minimal 6 karakter!');
+    btn.disabled = false;
+    btn.textContent = 'Jalankan Setup Sekarang';
+    return;
+  }
+
+  log('=== Memulai setup Firebase Firestore ===', 'info');
+
+  // --- STEP 1: Buat Akun Admin ---
+  setProgress('Membuat akun admin...', 5);
+  log('Membuat akun admin: ' + email, 'info');
+  try {
+    let uid;
+    try {
+      const cred = await fbAuth.createUserWithEmailAndPassword(email, pass);
+      uid = cred.user.uid;
+      log('✓ Akun Firebase Auth berhasil dibuat. UID: ' + uid, 'ok');
+    } catch (e) {
+      if (e.code === 'auth/email-already-in-use') {
+        // Coba login saja untuk dapat UID
+        const cred = await fbAuth.signInWithEmailAndPassword(email, pass);
+        uid = cred.user.uid;
+        log('⚠ Email sudah terdaftar, menggunakan akun yang ada. UID: ' + uid, 'warn');
+      } else { throw e; }
+    }
+
+    // Simpan profil di Firestore
+    await fbDb.collection('users').doc(uid).set({
+      username:       uname,
+      username_lower: uname.toLowerCase(),
+      email:          email.toLowerCase(),
+      satker:         satker,
+      role:           'Admin',
+      status:         'Aktif',
+      created_at:     firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    log('✓ Profil admin disimpan di Firestore (koleksi: users)', 'ok');
+    setBadge('b1', 'done');
+
+    await fbAuth.signOut();
+  } catch (e) {
+    log('✗ Gagal membuat akun admin: ' + e.message, 'err');
+    setBadge('b1', 'err');
+    btn.disabled = false;
+    btn.textContent = 'Coba Lagi';
+    return;
+  }
+
+  // --- STEP 2: Referensi Satker ---
+  setProgress('Mengisi referensi satker...', 20);
+  log('Mengisi ' + SATKER_LIST.length + ' satker OPD...', 'info');
+  try {
+    // Cek apakah sudah ada
+    const existing = await fbDb.collection('referensi_satker').limit(1).get();
+    if (!existing.empty) {
+      log('⚠ referensi_satker sudah ada, dilewati (hapus manual jika ingin reset).', 'warn');
+    } else {
+      await batchInsert('referensi_satker', SATKER_LIST);
+      log('✓ ' + SATKER_LIST.length + ' satker berhasil dimasukkan.', 'ok');
+    }
+  } catch (e) {
+    log('✗ Error referensi_satker: ' + e.message, 'err');
+  }
+
+  // --- STEP 3: Referensi Jenis Tenaga ---
+  setProgress('Mengisi referensi jenis tenaga...', 50);
+  log('Mengisi ' + JENIS_TENAGA_LIST.length + ' jenis tenaga alih daya...', 'info');
+  try {
+    const existing = await fbDb.collection('referensi_jenis_tenaga').limit(1).get();
+    if (!existing.empty) {
+      log('⚠ referensi_jenis_tenaga sudah ada, dilewati.', 'warn');
+    } else {
+      await batchInsert('referensi_jenis_tenaga', JENIS_TENAGA_LIST);
+      log('✓ ' + JENIS_TENAGA_LIST.length + ' jenis tenaga berhasil dimasukkan.', 'ok');
+    }
+  } catch (e) {
+    log('✗ Error referensi_jenis_tenaga: ' + e.message, 'err');
+  }
+
+  // --- STEP 4: Referensi Penyedia ---
+  setProgress('Mengisi referensi penyedia...', 75);
+  log('Mengisi ' + PENYEDIA_LIST.length + ' penyedia Non UMKK...', 'info');
+  try {
+    const existing = await fbDb.collection('referensi_penyedia').limit(1).get();
+    if (!existing.empty) {
+      log('⚠ referensi_penyedia sudah ada, dilewati.', 'warn');
+    } else {
+      await batchInsert('referensi_penyedia', PENYEDIA_LIST);
+      log('✓ ' + PENYEDIA_LIST.length + ' penyedia berhasil dimasukkan.', 'ok');
+    }
+  } catch (e) {
+    log('✗ Error referensi_penyedia: ' + e.message, 'err');
+  }
+  setBadge('b2', 'done');
+
+  // --- SELESAI ---
+  setProgress('Selesai!', 100);
+  log('', 'info');
+  log('=== ✓ SETUP SELESAI! ===', 'ok');
+  log('Sekarang buka aplikasi dan login dengan:', 'info');
+  log('  Username : ' + uname, 'ok');
+  log('  Email    : ' + email, 'ok');
+  log('  Password : (yang baru saja diisi)', 'ok');
+  log('Jangan lupa upload index.html ke Cloudflare Pages!', 'warn');
+
+  btn.style.background = '#10b981';
+  btn.textContent = '✓ Setup Berhasil!';
+}
+</script>
+</body>
+</html>

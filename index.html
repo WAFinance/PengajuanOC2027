@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id" data-bs-theme="dark">
 <head>
   <meta charset="utf-8">
@@ -507,6 +507,10 @@
               <label for="fHps">Nilai HPS</label>
               <div class="rp-wrap"><span class="rp">Rp</span><input class="form-control" id="fHps" inputmode="numeric" placeholder="0" required></div>
             </div>
+            <div class="fld">
+              <label for="fPagu">Pagu Anggaran</label>
+              <div class="rp-wrap"><span class="rp">Rp</span><input class="form-control" id="fPagu" inputmode="numeric" placeholder="0"></div>
+            </div>
           </div>
           <div class="col-lg-6">
             <div class="fld">
@@ -517,6 +521,10 @@
             <div class="fld">
               <label for="fJumlah">Jumlah tenaga</label>
               <input class="form-control" id="fJumlah" type="number" min="1" step="1" placeholder="Jumlah personel" required>
+            </div>
+            <div class="fld">
+              <label for="fRup">Kode RUP <span class="text-muted fw-normal small">(opsional)</span></label>
+              <input class="form-control" id="fRup" placeholder="Contoh: 55512345" maxlength="50">
             </div>
           </div>
         </div>
@@ -858,6 +866,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbAuth = firebase.auth();
 const fbDb  = firebase.firestore();
+// Backend Gateway Cloudflare Pages (/api/upload dan /api/file)
+// Kosongkan '' karena frontend dan functions berada dalam domain Cloudflare Pages yang sama
+const API_GATEWAY_URL = '';
 
 const LIMIT = 15000000000; // Rp 15 Miliar
 const UKURAN_HALAMAN = 50;
@@ -1217,6 +1228,8 @@ const api = async (fn, ...args) => {
           VerifikatorTahap2      : p.verifikator_tahap2,
           TglTahap2              : p.tgl_verifikasi_tahap2,
           Link_Katalog           : p.link_katalog,
+          Kode_RUP               : p.kode_rup || '',
+          Pagu_Anggaran          : Number(p.pagu_anggaran) || 0,
           Catatan_Umum           : p.catatan_umum,
           CatatanItem            : p.catatan_item || {},
           Dok                    : dok,
@@ -1290,6 +1303,8 @@ const api = async (fn, ...args) => {
         jenis_tenaga_alih_daya: d.jenis,
         jumlah_tenaga         : d.jumlah,
         link_katalog          : d.link || null,
+        kode_rup              : d.rup || null,
+        pagu_anggaran         : d.pagu || null,
         status                : 'Menunggu Verifikasi Tahap 1',
         tahap                 : 1,
         created_at            : firebase.firestore.FieldValue.serverTimestamp()
@@ -1348,6 +1363,7 @@ const api = async (fn, ...args) => {
       await fbDb.collection('pengajuan').doc(id).update({
         nama_paket: d.nama, calon_penyedia: d.penyedia, nilai_hps: d.nilai,
         jenis_tenaga_alih_daya: d.jenis, jumlah_tenaga: d.jumlah, link_katalog: d.link,
+        kode_rup: d.rup || null, pagu_anggaran: d.pagu || null,
         status: 'Menunggu Verifikasi Tahap 1', catatan_umum: '', catatan_item: {}
       });
       return { ok: true, message: 'Revisi pengajuan ' + id + ' berhasil dikirim ulang.' };
@@ -1408,11 +1424,33 @@ const api = async (fn, ...args) => {
       return { ok: true };
     }
 
-    /* ---- DOKUMEN (Google Drive link) ---- */
+    /* ---- DOKUMEN (Cloudflare Pages Gateway -> Google Drive Admin) ---- */
     case 'unggahDokumen': {
-      // Firebase Storage tidak aktif (paket Spark gratis)
-      // Gunakan tautan Google Drive via tautanDokumen
-      return { ok: false, message: 'Upload berkas langsung tidak tersedia. Gunakan tautan Google Drive di bawah.' };
+      const [id, jenis, namaFile, file] = args;
+      try {
+        const cleanName = (namaFile || 'dokumen.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('submissionId', id);
+        formData.append('jenis', jenis);
+
+        const resp = await fetch((API_GATEWAY_URL || '') + '/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const res = await resp.json();
+        if (!res.ok) throw new Error(res.message || 'Gagal menyimpan ke Google Drive Admin.');
+
+        const fileId = res.fileId;
+        const col = 'dokumen_' + (jenis === 'kertas' ? 'kertas_kerja' : jenis);
+        const upd = {};
+        upd[col]  = 'gateway:' + fileId + '|' + cleanName;
+        await fbDb.collection('pengajuan').doc(id).update(upd);
+        return { ok: true, nama: cleanName, fileId: fileId };
+      } catch (err) {
+        console.error('Upload gateway error:', err);
+        throw new Error('Gagal mengunggah berkas: ' + (err.message || err));
+      }
     }
     case 'tautanDokumen': {
       const [id, jenis, tautan] = args;
@@ -1429,7 +1467,15 @@ const api = async (fn, ...args) => {
       const raw  = snap.data()[col];
       if (!raw) return { ok: false, message: 'Dokumen belum ada.' };
       const link = raw.split('|')[0];
+      if (link.startsWith('gateway:')) {
+        const fileId = link.substring(8);
+        window.open((API_GATEWAY_URL || '') + '/api/file/' + fileId, '_blank');
+        return { ok: true };
+      }
       if (link.startsWith('link:')) { window.open(link.substring(5), '_blank'); return { ok: true }; }
+      if (link.startsWith('drive:')) { window.open(link.substring(6), '_blank'); return { ok: true }; }
+      if (link.startsWith('storage:')) { window.open(link.substring(8), '_blank'); return { ok: true }; }
+      if (link.startsWith('http://') || link.startsWith('https://')) { window.open(link, '_blank'); return { ok: true }; }
       return { ok: false, message: 'Format dokumen tidak dikenali.' };
     }
 
@@ -2095,139 +2141,181 @@ document.addEventListener('click', e => {
  * ===================================================================== */
 function renderKertasKerjaHtml(d) {
   const isDraft = !d.ID_Pengajuan;
-  const noReg = d.ID_Pengajuan || 'DRAFT-FORMULIR-' + Date.now().toString().slice(-6);
-  const tgl = d.Timestamp || (new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB');
+  const noReg = d.ID_Pengajuan || 'DRAFT-' + Date.now().toString().slice(-6);
+  const tglObj = new Date();
+  const tglCetak = tglObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  const tahunAnggaran = tglObj.getFullYear();
   const nonUmkk = isNonUmkk(d.Calon_Penyedia);
   const hpsVal = Number(d.Nilai_HPS) || 0;
+  const paguVal = Number(d.Pagu_Anggaran) || 0;
   const hpsRp = rp(hpsVal);
+  const paguRp = paguVal ? rp(paguVal) : '-';
   const terbilangStr = terbilang(hpsVal) + ' Rupiah';
   const satker = d.OPD_Pengaju || state.satker || '-';
   const satkerNama = state.ref && state.ref.satker ? (state.ref.satker.find(s => normNama(s) === normNama(satker)) || satker) : satker;
+  const kodeRup = d.Kode_RUP || '-';
+  const linkKatalog = (d.Link_Katalog || '').trim();
+  const linkHtml = linkKatalog
+    ? '<a href="' + esc(linkKatalog) + '" target="_blank" style="color:#0d6efd;text-decoration:underline;word-break:break-all;">' + esc(linkKatalog) + '</a>'
+    : '<span class="text-muted fst-italic">Belum dilampirkan</span>';
 
-  const kakStatus = d.Dok && d.Dok.kak ? '<span class="text-success fw-bold">✓ Terunggah (' + esc(d.Dok.kak) + ')</span>' : (d.hasKakFile ? '<span class="text-success fw-bold">✓ Terlampir di Formulir</span>' : '<span class="text-muted fst-italic">Belum dilampirkan</span>');
-  const hpsStatus = d.Dok && d.Dok.hps ? '<span class="text-success fw-bold">✓ Terunggah (' + esc(d.Dok.hps) + ')</span>' : (d.hasHpsFile ? '<span class="text-success fw-bold">✓ Terlampir di Formulir</span>' : '<span class="text-muted fst-italic">Belum dilampirkan</span>');
+  const th = (txt, w) => '<th style="background:#f1f5f9;width:' + (w || '35%') + ';padding:5px 8px;border:1px solid #333;font-size:9.5pt;font-weight:600;">' + txt + '</th>';
+  const td = (txt) => '<td style="padding:5px 8px;border:1px solid #333;font-size:9.5pt;">' + txt + '</td>';
+  const tr = (a, b) => '<tr>' + th(a) + td(b) + '</tr>';
+  const secH = (txt) => '<div style="font-weight:bold;font-size:10pt;margin-top:14px;margin-bottom:4px;text-transform:uppercase;">' + txt + '</div>';
 
-  const statusTeks = d.Status || 'Pengajuan Baru (Draft)';
-  const tahapTeks = d.Tahap ? 'Tahap ' + d.Tahap : 'Tahap 1 (Evaluasi Penyedia)';
-  const verifTahap1 = d.VerifikatorTahap1 ? (esc(d.VerifikatorTahap1) + ' (' + (d.TglTahap1 ? new Date(d.TglTahap1).toLocaleDateString('id-ID') : '-') + ')') : 'Menunggu Evaluasi';
-  const verifTahap2 = d.VerifikatorTahap2 ? (esc(d.VerifikatorTahap2) + ' (' + (d.TglTahap2 ? new Date(d.TglTahap2).toLocaleDateString('id-ID') : '-') + ')') : 'Menunggu Pemeriksaan Dokumen';
-  const catatan = d.Catatan_Umum ? esc(d.Catatan_Umum) : 'Kertas kerja hasil pengisian formulir sistem e-purchasing tenaga alih daya Pemerintah Kota Surakarta.';
+  return '<div class="surat-kertas-kerja" style="max-width:860px;margin:0 auto;color:#111;font-family:\'Times New Roman\',serif;padding:20px;line-height:1.4;">' +
 
-  return '<div class="surat-kertas-kerja p-4" style="max-width: 860px; margin: 0 auto; color: #111;">' +
-    '<!-- KOP SURAT PEMKOT SURAKARTA -->' +
-    '<div class="text-center pb-2 mb-3" style="border-bottom: 3px double #000;">' +
-      '<div class="fw-bold text-uppercase" style="font-size: 15pt; letter-spacing: 1.5px; line-height: 1.2;">PEMERINTAH KOTA SURAKARTA</div>' +
-      '<div class="fw-bold text-uppercase" style="font-size: 13pt; line-height: 1.3;">' + esc(satkerNama.toUpperCase()) + '</div>' +
-      '<div style="font-size: 8.5pt; color: #444;">Kota Surakarta, Jawa Tengah 57111</div>' +
+    '<!-- KOP SURAT -->' +
+    '<div class="text-center pb-2 mb-3" style="border-bottom:3px double #000;">' +
+      '<div style="font-size:14pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;line-height:1.2;">PEMERINTAH KOTA SURAKARTA</div>' +
+      '<div style="font-size:12.5pt;font-weight:bold;text-transform:uppercase;line-height:1.3;">' + esc(satkerNama.toUpperCase()) + '</div>' +
+      '<div style="font-size:8.5pt;color:#333;">Kota Surakarta, Jawa Tengah 57111</div>' +
     '</div>' +
 
-    '<!-- JUDUL DOKUMEN -->' +
+    '<!-- JUDUL SURAT SESUAI TEMPLATE WORD -->' +
     '<div class="text-center my-3">' +
-      '<div class="fw-bold text-uppercase text-decoration-underline" style="font-size: 12.5pt; letter-spacing: .5px;">' +
-        'KERTAS KERJA PERSIAPAN E-PURCHASING TENAGA ALIH DAYA (OUTSOURCING)' +
-      '</div>' +
-      '<div class="small mt-1 text-muted">Nomor Registrasi: <b class="text-dark">' + esc(noReg) + '</b> ' + (isDraft ? '<span class="badge bg-warning text-dark ms-1">DRAFT FORMULIR</span>' : '') + '</div>' +
+      '<div style="font-size:12pt;font-weight:bold;text-decoration:underline;text-transform:uppercase;letter-spacing:.5px;">KERTAS KERJA PERSIAPAN PENGADAAN E-PURCHASING</div>' +
+      '<div style="font-size:11pt;font-weight:bold;margin-top:2px;">Belanja Tenaga Alih Daya ' + esc(d.Jenis_Tenaga_Alih_Daya || 'Tenaga Kebersihan') + '</div>' +
+      (isDraft ? '<div class="mt-1"><span class="badge bg-warning text-dark">DRAFT FORMULIR</span></div>' : '<div style="font-size:8.5pt;color:#555;margin-top:2px;">No. Registrasi: <b>' + esc(noReg) + '</b></div>') +
     '</div>' +
 
-    '<!-- TABEL RINCIAN PENGADAAN -->' +
-    '<table class="table table-bordered table-sm my-3 align-middle" style="font-size: 9.8pt; border-color: #333;">' +
+    '<!-- 1. IDENTITAS PAKET -->' +
+    secH('Identitas Paket :') +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">' +
+      tr('Program', '-') +
+      tr('Kegiatan', '-') +
+      tr('Sub. Kegiatan', '-') +
+      tr('Paket Pekerjaan', '<b>' + esc(d.Nama_Paket || '-') + '</b>') +
+      tr('Pagu Anggaran', paguRp) +
+      tr('Harga Perkiraan Sendiri (HPS)', '<b>' + hpsRp + '</b><br><span style="font-size:8.5pt;font-style:italic;">Terbilang: ' + terbilangStr + '</span>') +
+      tr('Sumber Anggaran', 'APBD Kota Surakarta Tahun ' + tahunAnggaran) +
+      tr('Kode RUP', esc(kodeRup)) +
+      tr('Jenis Tenaga Alih Daya', esc(d.Jenis_Tenaga_Alih_Daya || '-')) +
+      tr('Jumlah Kebutuhan Personel', '<b>' + (d.Jumlah_Tenaga || 0) + ' Orang</b>') +
+    '</table>' +
+
+    '<!-- 2. SPESIFIKASI TEKNIS -->' +
+    secH('Spesifikasi Teknis') +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">' +
+      '<thead><tr style="background:#e8f0fe;">' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;width:5%;text-align:center;">No</th>' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;width:45%;">Kegiatan</th>' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;">Pembahasan</th>' +
+      '</tr></thead>' +
       '<tbody>' +
         '<tr>' +
-          '<th style="width: 32%; background-color: #f8f9fa;">Satker / OPD Pengaju</th>' +
-          '<td><b>' + esc(satkerNama) + '</b></td>' +
+          '<td style="border:1px solid #333;padding:5px;text-align:center;font-size:9pt;">1.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Apakah spesifikasi teknis telah dituangkan dengan lengkap</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Spesifikasi teknis <b>Sudah dituangkan dengan lengkap</b> dalam Kerangka Acuan Kerja (KAK)</td>' +
         '</tr>' +
         '<tr>' +
-          '<th style="background-color: #f8f9fa;">Nama Paket Pengadaan</th>' +
-          '<td><b>' + esc(d.Nama_Paket || '-') + '</b></td>' +
-        '</tr>' +
-        '<tr>' +
-          '<th style="background-color: #f8f9fa;">Jenis Tenaga Alih Daya</th>' +
-          '<td>' + esc(d.Jenis_Tenaga_Alih_Daya || '-') + '</td>' +
-        '</tr>' +
-        '<tr>' +
-          '<th style="background-color: #f8f9fa;">Jumlah Kebutuhan Personel</th>' +
-          '<td><b>' + (d.Jumlah_Tenaga || 0) + ' Orang</b></td>' +
-        '</tr>' +
-        '<tr>' +
-          '<th style="background-color: #f8f9fa;">Nilai Total HPS (Termasuk PPN)</th>' +
-          '<td>' +
-            '<span class="fw-bold text-primary fs-6">' + hpsRp + '</span>' +
-            '<div class="fst-italic text-muted small mt-1">Terbilang: <b>' + terbilangStr + '</b></div>' +
-          '</td>' +
-        '</tr>' +
-        '<tr>' +
-          '<th style="background-color: #f8f9fa;">Calon Penyedia yang Dipilih</th>' +
-          '<td>' +
-            '<b>' + esc(d.Calon_Penyedia || '-') + '</b>' +
-            '<span class="badge ' + (nonUmkk ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle') + ' ms-2">' +
-              (nonUmkk ? 'Non UMKK (Bebas Batas 15M)' : 'UMKK (Batas Maks. 15 Miliar)') +
-            '</span>' +
-          '</td>' +
-        '</tr>' +
-        '<tr>' +
-          '<th style="background-color: #f8f9fa;">Tautan Etalase e-Katalog</th>' +
-          '<td class="text-break" style="font-size: 9pt;">' + (d.Link_Katalog ? '<a href="' + esc(d.Link_Katalog) + '" target="_blank">' + esc(d.Link_Katalog) + '</a>' : '<span class="text-muted fst-italic">Belum dilampirkan</span>') + '</td>' +
-        '</tr>' +
-        '<tr>' +
-          '<th style="background-color: #f8f9fa;">Waktu Pengajuan / Pencatatan</th>' +
-          '<td>' + esc(tgl) + '</td>' +
-        '</tr>' +
-        '<tr>' +
-          '<th style="background-color: #f8f9fa;">Status Verifikasi Sistem</th>' +
-          '<td><b>' + esc(statusTeks) + '</b> <span class="badge bg-secondary ms-1">' + tahapTeks + '</span></td>' +
+          '<td style="border:1px solid #333;padding:5px;text-align:center;font-size:9pt;">2.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Apakah spesifikasi teknis telah dijabarkan dengan : Kesesuaian spesifikasi teknis dengan kebutuhan</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Spesifikasi teknis <b>sudah sesuai</b> dengan kebutuhan.</td>' +
         '</tr>' +
       '</tbody>' +
     '</table>' +
 
-    '<!-- KELENGKAPAN DOKUMEN -->' +
-    '<div class="mb-3">' +
-      '<div class="fw-bold mb-1" style="font-size: 9.8pt;">Kelengkapan Dokumen Persiapan Pengadaan:</div>' +
-      '<table class="table table-bordered table-sm text-center" style="font-size: 9.2pt; border-color: #333;">' +
-        '<thead style="background-color: #f8f9fa;">' +
-          '<tr><th style="width: 7%;">No</th><th style="width: 48%; text-align: left;">Nama Dokumen Pendukung</th><th style="width: 25%;">Status</th><th style="width: 20%;">Bentuk Dokumen</th></tr>' +
-        '</thead>' +
-        '<tbody>' +
-          '<tr><td>1</td><td style="text-align: left;">Kerangka Acuan Kerja (KAK) / Spesifikasi Teknis</td><td>' + kakStatus + '</td><td>Berkas Terunggah</td></tr>' +
-          '<tr><td>2</td><td style="text-align: left;">Harga Perkiraan Sendiri (HPS) & Rincian Komponen</td><td>' + hpsStatus + '</td><td>Berkas Terunggah</td></tr>' +
-          '<tr><td>3</td><td style="text-align: left;">Kertas Kerja Pengadaan Tenaga Alih Daya</td><td><span class="text-success fw-bold">✓ Dibuat Sistem</span></td><td>Hasil Formulir Ini</td></tr>' +
-        '</tbody>' +
-      '</table>' +
-    '</div>' +
+    '<!-- 3. REFERENSI HARGA -->' +
+    secH('Referensi Harga') +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">' +
+      '<thead><tr style="background:#e8f0fe;">' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;width:5%;text-align:center;">No</th>' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;width:45%;">Kegiatan</th>' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;">Hasil</th>' +
+      '</tr></thead>' +
+      '<tbody>' +
+        '<tr>' +
+          '<td style="border:1px solid #333;padding:5px;text-align:center;font-size:9pt;">1.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Apakah PPK telah mengumpulkan referensi harga yang cukup dan memadai sehingga dapat menjadi dasar penentuan harga.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">PPK <b>Sudah</b> mengumpulkan referensi harga yang cukup dan memadai sehingga dapat menjadi dasar penentuan harga. (minimal 3 referensi)</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td style="border:1px solid #333;padding:5px;text-align:center;font-size:9pt;">2.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Apakah harga yang digunakan PPK relevan dengan harga pasar, kontrak sejenis yang pernah dilakukan, atau sumber lainnya.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Harga yang digunakan PPK <b>Sudah</b> relevan dengan harga pasar atau sumber lainnya yang dapat dipertanggungjawabkan.<br><span style="font-size:8.5pt;color:#333;">Sebagai informasi adalah <b>Perwali Kota Surakarta Nomor 23 Tahun 2025 Tentang SHS di Lingkungan Pemkot Surakarta Tahun 2025</b>.</span></td>' +
+        '</tr>' +
+      '</tbody>' +
+    '</table>' +
 
-    '<!-- RIWAYAT PENELAAHAN / CATATAN -->' +
-    '<div class="mb-4" style="font-size: 9.2pt;">' +
-      '<div class="fw-bold mb-1">Catatan Penelaahan / Verifikasi:</div>' +
-      '<div class="p-2 border rounded bg-light" style="min-height: 48px;">' +
-        '<div>' + catatan + '</div>' +
-        '<div class="small text-muted mt-2 pt-2 border-top">' +
-          'Verifikator Tahap 1 (Admin BPBJ): <b>' + verifTahap1 + '</b> &bull; ' +
-          'Verifikator Tahap 2 (Pokja BPBJ): <b>' + verifTahap2 + '</b>' +
+    '<!-- 4. EVALUASI METODE PEMILIHAN PENYEDIA -->' +
+    secH('Kertas Kerja Evaluasi terhadap Rencana Metode Pemilihan Penyedia') +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">' +
+      '<thead><tr style="background:#e8f0fe;">' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;width:5%;text-align:center;">No</th>' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;width:45%;">Kegiatan</th>' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;">Hasil</th>' +
+      '</tr></thead>' +
+      '<tbody>' +
+        '<tr>' +
+          '<td style="border:1px solid #333;padding:5px;text-align:center;font-size:9pt;">1.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Apakah PPK telah menentukan metode pemilihan penyedia</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">PPK <b>Sudah</b> menentukan metode pemilihan penyedia</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td style="border:1px solid #333;padding:5px;text-align:center;font-size:9pt;">2.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Apakah metode pemilihan penyedia yang dipilih PPK menggunakan:<br>&bull; Negosiasi harga<br>&bull; Mini kompetisi</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">PPK memilih metode pemilihan : <b>Negosiasi harga</b> dengan mempertimbangkan mutu/kualitas, jumlah, waktu dan Layanan.<br><span class="badge ' + (nonUmkk ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle') + ' mt-1">' + (nonUmkk ? 'Penyedia Non UMKK' : 'Penyedia UMKK (Batas Rp 15 Miliar)') + '</span></td>' +
+        '</tr>' +
+      '</tbody>' +
+    '</table>' +
+
+    '<!-- 5. EVALUASI KETERSEDIAAN PRODUK DI KATALOG ELEKTRONIK -->' +
+    secH('Kertas Kerja Evaluasi terhadap Ketersediaan Produk di Katalog Elektronik') +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">' +
+      '<thead><tr style="background:#e8f0fe;">' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;width:5%;text-align:center;">No</th>' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;width:35%;">Kegiatan</th>' +
+        '<th style="border:1px solid #333;padding:5px;font-size:9pt;">Hasil</th>' +
+      '</tr></thead>' +
+      '<tbody>' +
+        '<tr>' +
+          '<td style="border:1px solid #333;padding:5px;text-align:center;font-size:9pt;">1.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Apakah ada ketersediaan produk di katalog elektronik.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">' +
+            'Ketersediaan produk di katalog elektronik <b>Sudah dipastikan</b> :<br>' +
+            '<b>' + esc(d.Calon_Penyedia || '-') + '</b><br>' +
+            'Tautan produk: ' + linkHtml +
+          '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td style="border:1px solid #333;padding:5px;text-align:center;font-size:9pt;">2.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Apakah ada penyedia di e-katalog yang menyediakan produk yg akan di-purchase.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Ketersediaan penyedia katalog di katalog elektronik <b>Sudah dilampiri</b> dengan bukti tangkapan layar dan tautan penyedia katalog.</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td style="border:1px solid #333;padding:5px;text-align:center;font-size:9pt;">3.</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">Pemilihan Penyedia</td>' +
+          '<td style="border:1px solid #333;padding:5px;font-size:9pt;">' +
+            'Dari hasil verifikasi berdasarkan :<br>' +
+            '&bull; Harga, kuantitas, kualitas produk<br>' +
+            '&bull; Spesifikasi<br>' +
+            '&bull; Jangkauan penyedia<br><br>' +
+            'Calon penyedia yang memiliki kualifikasi usaha yang sesuai serta memiliki item pekerjaan/ sub kategori lengkap sesuai kebutuhan pada paket pekerjaan ini adalah :<br>' +
+            '<b>' + esc(d.Calon_Penyedia || '-') + '</b><br>' +
+            'Tautan Produk di Katalog Elektronik: ' + linkHtml +
+          '</td>' +
+        '</tr>' +
+      '</tbody>' +
+    '</table>' +
+
+    '<!-- TANDA TANGAN HANYA PPK PENGAJU (TIDAK ADA KOLOM BPBJ) -->' +
+    '<div class="mt-4 pt-3" style="font-size:10pt;page-break-inside:avoid;">' +
+      '<div style="display:flex;justify-content:flex-end;">' +
+        '<div class="text-center" style="min-width:280px;">' +
+          '<div>Surakarta, ' + tglCetak + '</div>' +
+          '<div style="font-weight:bold;margin-top:2px;">Pejabat Pembuat Komitmen (PPK)</div>' +
+          '<div style="font-weight:bold;text-transform:uppercase;font-size:9pt;margin-top:1px;">' + esc(satkerNama) + '</div>' +
+          '<div style="height:70px;"></div>' +
+          '<div style="font-weight:bold;text-decoration:underline;">( .................................................. )</div>' +
+          '<div style="font-size:9pt;margin-top:2px;">NIP. ................................................</div>' +
         '</div>' +
       '</div>' +
     '</div>' +
 
-    '<!-- LEMBAR TANDA TANGAN PENGESAHAN -->' +
-    '<div class="row text-center mt-4 pt-2" style="font-size: 9.5pt; page-break-inside: avoid;">' +
-      '<div class="col-6">' +
-        '<div>Mengetahui / Memeriksa,</div>' +
-        '<div class="fw-bold">Tim Verifikator BPBJ</div>' +
-        '<div class="small text-muted">Bagian Pengadaan Barang dan Jasa, Setda Surakarta</div>' +
-        '<div style="height: 65px;"></div>' +
-        '<div class="fw-bold text-decoration-underline">( ..................................................... )</div>' +
-        '<div class="small text-muted">Admin / Pokja Pemilihan BPBJ</div>' +
-      '</div>' +
-      '<div class="col-6">' +
-        '<div>Surakarta, ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) + '</div>' +
-        '<div class="fw-bold">Pejabat Pembuat Komitmen (PPK)</div>' +
-        '<div class="small text-muted fw-semibold text-uppercase">' + esc(satkerNama) + '</div>' +
-        '<div style="height: 65px;"></div>' +
-        '<div class="fw-bold text-decoration-underline">( .................................................... )</div>' +
-        '<div class="small text-muted">NIP. ....................................................</div>' +
-      '</div>' +
-    '</div>' +
   '</div>';
 }
-
 function bukaCetakKertas(id) {
   const p = state.list.find(x => x.ID_Pengajuan === id);
   if (!p) { toast('Data pengajuan tidak ditemukan.', 'warning'); return; }
@@ -2257,6 +2345,8 @@ function cetakKertasDraftForm() {
     Nama_Paket: nama || '(Belum diisi)',
     Calon_Penyedia: penyedia || '(Belum dipilih)',
     Nilai_HPS: hps,
+    Pagu_Anggaran: parseInt(($('#fPagu').value || '').replace(/\D/g,''), 10) || 0,
+    Kode_RUP: ($('#fRup').value || '').trim(),
     Jenis_Tenaga_Alih_Daya: jenis || '(Belum dipilih)',
     Jumlah_Tenaga: jumlah,
     Link_Katalog: link,
@@ -2439,6 +2529,12 @@ fHps.addEventListener('input', () => {
   if (isAdmin(state.role)) renderPenyediaInfo();
 });
 
+const fPagu = $('#fPagu');
+fPagu.addEventListener('input', () => {
+  const d = fPagu.value.replace(/\D/g, '').slice(0, 13);
+  fPagu.value = d ? Number(d).toLocaleString('id-ID') : '';
+});
+
 async function cekPenyedia(nama) {
   if (!isAdmin(state.role)) {
     state.pen = { nama: '', total: 0, jumlah: 0, ada: false, isNonUmkk: false };
@@ -2481,7 +2577,7 @@ function renderPenyediaInfo() {
   box.innerHTML = miniRuler(p.total, nilai) + '<div class="pen-text">' + awal + '<br>' + akhir + '</div>';
 }
 
-const dataForm = () => ({ link: $('#fLink').value.trim(), nama: $('#fNama').value, penyedia: $('#fPenyedia').value, nilai: getNilai(), jenis: $('#fJenis').value, jumlah: Number($('#fJumlah').value) });
+const dataForm = () => ({ link: $('#fLink').value.trim(), nama: $('#fNama').value, penyedia: $('#fPenyedia').value, nilai: getNilai(), jenis: $('#fJenis').value, jumlah: Number($('#fJumlah').value), rup: ($('#fRup').value || '').trim(), pagu: parseInt(($('#fPagu').value || '').replace(/\D/g,''), 10) || 0 });
 
 function resetForm() {
   $('#formPengajuan').reset();
@@ -2508,6 +2604,8 @@ function mulaiEdit(id) {
   $('#fJenis').value = p.Jenis_Tenaga_Alih_Daya;
   $('#fJumlah').value = p.Jumlah_Tenaga;
   $('#fLink').value = p.Link_Katalog || '';
+  $('#fRup').value = p.Kode_RUP || '';
+  fPagu.value = p.Pagu_Anggaran ? Number(p.Pagu_Anggaran).toLocaleString('id-ID') : '';
   $('#panelForm').classList.add('editing');
   $('#btnKirim').textContent = 'Kirim ulang revisi';
   $('#fileSection').style.display = 'none';
