@@ -1,0 +1,16 @@
+# Nama harus SAMA dengan nama Worker di Cloudflare (alamat Worker: pengajuanoc2027.wafinance.workers.dev)
+name = "pengajuanoc2027"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+FIREBASE_PROJECT_ID = "pengajuanoc2027-ff269"
+# Alamat tempat aplikasi dibuka, tanpa garis miring di akhir dan tanpa /app.html.
+# Tambahkan alamat lain dengan koma bila perlu, mis. "https://a.pages.dev,https://b.pages.dev"
+ALLOWED_ORIGINS = "https://pengajuanoc2027.pages.dev"
+
+# Opsional: isi ID folder Drive agar folder pasti sama. Kosongkan untuk dicari/dibuat otomatis.
+# DRIVE_FOLDER_ID = ""
+
+# Rahasia (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN) JANGAN ditulis di sini.
+# Isi lewat dashboard (tipe Secret) atau: wrangler secret put NAMA
