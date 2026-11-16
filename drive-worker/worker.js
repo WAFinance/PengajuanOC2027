@@ -242,9 +242,14 @@ export default {
         ok: true,
         ALLOWED_ORIGINS_terisi: (env.ALLOWED_ORIGINS || '').split(',').filter(s => s.trim()).length,
         FIREBASE_PROJECT_ID: !!env.FIREBASE_PROJECT_ID,
-        GOOGLE_CLIENT_ID: !!env.GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_SECRET: !!env.GOOGLE_CLIENT_SECRET,
-        GOOGLE_REFRESH_TOKEN: !!env.GOOGLE_REFRESH_TOKEN
+        GOOGLE_CLIENT_ID: !!String(env.GOOGLE_CLIENT_ID || '').trim(),
+        GOOGLE_CLIENT_SECRET: !!String(env.GOOGLE_CLIENT_SECRET || '').trim(),
+        GOOGLE_REFRESH_TOKEN: !!String(env.GOOGLE_REFRESH_TOKEN || '').trim(),
+        // Cek bentuk nilai (bukan isinya): ID berakhiran .apps.googleusercontent.com,
+        // secret berawalan GOCSPX-, refresh token berawalan 1//
+        bentuk_CLIENT_ID_wajar: /\.apps\.googleusercontent\.com$/.test(String(env.GOOGLE_CLIENT_ID || '').trim()),
+        bentuk_CLIENT_SECRET_wajar: /^GOCSPX-/.test(String(env.GOOGLE_CLIENT_SECRET || '').trim()),
+        bentuk_REFRESH_TOKEN_wajar: /^1\/\//.test(String(env.GOOGLE_REFRESH_TOKEN || '').trim())
       });
     }
     if (request.method === 'OPTIONS') {
