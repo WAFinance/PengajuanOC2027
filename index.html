@@ -867,8 +867,8 @@ firebase.initializeApp(firebaseConfig);
 const fbAuth = firebase.auth();
 const fbDb  = firebase.firestore();
 /* Penyimpanan berkas: Google Drive lewat Cloudflare Worker (lihat folder drive-worker/).
- * Isi https://pengajuanoc2027.wafinance.workers.dev dengan alamat Worker setelah deploy. Firestore hanya menyimpan metadata. */
-const https://pengajuanoc2027.wafinance.workers.dev = 'https://pengajuanoc2027.wafinance.workers.dev';
+ * Isi DRIVE_WORKER_URL dengan alamat Worker setelah deploy. Firestore hanya menyimpan metadata. */
+const DRIVE_WORKER_URL = 'https://pengajuanoc2027.wafinance.workers.dev';
 
 async function tokenFirebase() {
   if (!fbAuth.currentUser && typeof fbAuth.authStateReady === 'function') await fbAuth.authStateReady();
@@ -885,8 +885,8 @@ async function pesanGalatWorker(resp, awal) {
 
 // Unggah satu berkas ke Google Drive; mengembalikan { url, nama, ref } (ref = format simpan di Firestore)
 async function uploadKeDrive(id, jenis, file) {
-  if (/GANTI-DENGAN/.test(https://pengajuanoc2027.wafinance.workers.dev)) {
-    throw new Error('Konfigurasi penyimpanan belum diisi (https://pengajuanoc2027.wafinance.workers.dev).');
+  if (/GANTI-DENGAN/.test(DRIVE_WORKER_URL)) {
+    throw new Error('Konfigurasi penyimpanan belum diisi (DRIVE_WORKER_URL).');
   }
   const nama = (file.name || 'dokumen.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
   const mime = file.type || 'application/octet-stream';
@@ -895,7 +895,7 @@ async function uploadKeDrive(id, jenis, file) {
   // 1) Minta sesi unggah ke Worker (Worker memeriksa login & aturan berkas)
   let resp;
   try {
-    resp = await fetch(https://pengajuanoc2027.wafinance.workers.dev + '/upload-session', {
+    resp = await fetch(DRIVE_WORKER_URL + '/upload-session', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: nama, mime: mime, size: file.size, id: id, jenis: jenis })
@@ -927,7 +927,7 @@ async function hapusDariDrive(ref) {
     const link = String(ref || '').split('|')[0];
     if (!link.startsWith('gdrive:')) return;
     const token = await tokenFirebase();
-    await fetch(https://pengajuanoc2027.wafinance.workers.dev + '/file?id=' + encodeURIComponent(link.substring(7)), {
+    await fetch(DRIVE_WORKER_URL + '/file?id=' + encodeURIComponent(link.substring(7)), {
       method: 'DELETE', headers: { Authorization: 'Bearer ' + token }
     });
   } catch (e) { console.warn('Gagal membersihkan berkas Drive:', e); }
@@ -942,7 +942,7 @@ async function bukaDariDrive(fileId, nama) {
   const tab = ext === 'pdf' ? window.open('', '_blank') : null; // dibuka sinkron agar tidak diblokir popup
   try {
     const token = await tokenFirebase();
-    const resp = await fetch(https://pengajuanoc2027.wafinance.workers.dev + '/file?id=' + encodeURIComponent(fileId), {
+    const resp = await fetch(DRIVE_WORKER_URL + '/file?id=' + encodeURIComponent(fileId), {
       headers: { Authorization: 'Bearer ' + token }
     });
     if (!resp.ok) throw await pesanGalatWorker(resp, 'Berkas tidak dapat dibuka');
