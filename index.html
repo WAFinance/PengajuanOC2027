@@ -2837,7 +2837,8 @@ function renderItemAksi(tampil) {
   if (!tampil) { box.innerHTML = ''; box.style.display = 'none'; return; }
   box.style.display = '';
   // Fitur 5: Tanpa link katalog
-  box.innerHTML = Object.keys(ITEM_TOLAK).map(k =>
+  // Calon penyedia hanya dinilai Admin (Tahap 1); Pokja hanya memeriksa dokumen (KAK, HPS, Formulir)
+  box.innerHTML = Object.keys(ITEM_TOLAK).filter(k => k !== 'penyedia').map(k =>
     '<div class="item-row"><div class="form-check"><input class="form-check-input" type="checkbox" id="it-' + k + '" data-item="' + k + '"><label class="form-check-label" for="it-' + k + '">' + esc(ITEM_TOLAK[k]) + '</label></div>' +
     '<textarea class="form-control item-alasan" id="ia-' + k + '" rows="2" style="display:none" placeholder="Catatan/alasan perbaikan..."></textarea></div>').join('');
 }
