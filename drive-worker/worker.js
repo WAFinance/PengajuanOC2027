@@ -123,6 +123,13 @@ async function driveToken(env) {
   return j.access_token;
 }
 
+function ketGalat(status, j) {
+  const e = (j && j.error) || {};
+  const pesan = typeof e === 'string' ? e : (e.message || '');
+  const alasan = (e.errors && e.errors[0] && e.errors[0].reason) || e.status || '';
+  return ' [' + status + (alasan ? ' ' + alasan : '') + (pesan ? ': ' + String(pesan).slice(0, 160) : '') + ']';
+}
+
 async function rootFolder(env, at) {
   if (env.DRIVE_FOLDER_ID) return env.DRIVE_FOLDER_ID;
   if (folderCache) return folderCache;
@@ -130,7 +137,7 @@ async function rootFolder(env, at) {
   const q = encodeURIComponent("name='" + FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
   let r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id)&pageSize=1', { headers: auth });
   let j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new HttpError(502, 'Gagal membaca folder Drive.');
+  if (!r.ok) throw new HttpError(502, 'Gagal membaca folder Drive.' + ketGalat(r.status, j));
   if (j.files && j.files.length) return (folderCache = j.files[0].id);
 
   r = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
@@ -139,7 +146,7 @@ async function rootFolder(env, at) {
     body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
   });
   j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.id) throw new HttpError(502, 'Gagal membuat folder Drive.');
+  if (!r.ok || !j.id) throw new HttpError(502, 'Gagal membuat folder Drive.' + ketGalat(r.status, j));
   return (folderCache = j.id);
 }
 
@@ -181,8 +188,10 @@ async function buatSesi(request, env, user, c) {
   });
   const loc = r.headers.get('Location');
   if (!r.ok || !loc) {
-    console.error('Buat sesi gagal:', r.status, await r.text().catch(() => ''));
-    throw new HttpError(502, 'Drive menolak membuat sesi unggah.');
+    const teks = await r.text().catch(() => '');
+    console.error('Buat sesi gagal:', r.status, teks);
+    let jj = {}; try { jj = JSON.parse(teks); } catch (e) {}
+    throw new HttpError(502, 'Drive menolak membuat sesi unggah.' + ketGalat(r.status, jj));
   }
   return json({ ok: true, uploadUrl: loc }, 200, c.headers);
 }
