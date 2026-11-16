@@ -227,6 +227,17 @@ async function hapusBerkas(env, id, user, c) {
 export default {
   async fetch(request, env) {
     const c = corsInfo(request, env);
+    // Pemeriksaan konfigurasi (tanpa login, hanya menampilkan ada/tidaknya nilai, bukan isinya)
+    if (request.method === 'GET' && new URL(request.url).pathname === '/health') {
+      return json({
+        ok: true,
+        ALLOWED_ORIGINS_terisi: (env.ALLOWED_ORIGINS || '').split(',').filter(s => s.trim()).length,
+        FIREBASE_PROJECT_ID: !!env.FIREBASE_PROJECT_ID,
+        GOOGLE_CLIENT_ID: !!env.GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET: !!env.GOOGLE_CLIENT_SECRET,
+        GOOGLE_REFRESH_TOKEN: !!env.GOOGLE_REFRESH_TOKEN
+      });
+    }
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: c.ok ? 204 : 403, headers: c.headers });
     }
