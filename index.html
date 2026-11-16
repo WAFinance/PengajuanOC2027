@@ -757,6 +757,11 @@
       <div class="modal-body">
         <div class="mb-3" id="aksiInfo"></div>
         <div class="mb-3" id="aksiItems"></div>
+        <div class="fld mb-3" id="aksiPokjaWrap" style="display:none">
+          <label for="aksiPokja" id="aksiPokjaLabel">Delegasikan ke Pokja</label>
+          <select class="form-select" id="aksiPokja"></select>
+          <div class="small-note mt-1" id="aksiPokjaNote"></div>
+        </div>
         <div class="fld mb-1"><label for="aksiCatatan" id="aksiLabel">Catatan</label><textarea class="form-control" id="aksiCatatan" rows="3" maxlength="800"></textarea></div>
         <div class="small-note" id="aksiHint"></div>
       </div>
@@ -1358,10 +1363,16 @@ const api = async (fn, ...args) => {
 
     case 'getDetailPenyedia': {
       const [nama] = args;
-      const snap = await fbDb.collection('pengajuan').where('calon_penyedia', '==', nama)
-        .orderBy('created_at', 'desc').get();
+      // Tanpa orderBy agar tidak butuh composite index; diurutkan di sisi klien
+      const snap = await fbDb.collection('pengajuan').where('calon_penyedia', '==', nama).get();
+      const docsUrut = snap.docs.slice().sort((a, b) => {
+        const ta = a.data().created_at, tb = b.data().created_at;
+        const ma = ta && ta.toMillis ? ta.toMillis() : Number.MAX_SAFE_INTEGER; // timestamp belum terisi = paling baru
+        const mb = tb && tb.toMillis ? tb.toMillis() : Number.MAX_SAFE_INTEGER;
+        return mb - ma;
+      });
       let total = 0, jumlah = 0;
-      const list = snap.docs.map(d => {
+      const list = docsUrut.map(d => {
         const p = d.data();
         const dihitung = p.status !== 'Ditolak' && p.status !== 'Penyedia Ditolak';
         if (dihitung) { total += Number(p.nilai_hps) || 0; jumlah++; }
