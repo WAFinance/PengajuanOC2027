@@ -117,7 +117,7 @@ async function driveToken(env) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) {
     console.error('Refresh token gagal:', JSON.stringify(j));
-    throw new HttpError(502, 'Layanan Drive belum dapat diakses (periksa kredensial Worker).');
+    throw new HttpError(502, 'Layanan Drive belum dapat diakses. Kode dari Google: ' + (j.error || r.status) + '. Periksa kredensial Worker.');
   }
   tokenCache = { value: j.access_token, exp: now + (j.expires_in || 3600) * 1000 };
   return j.access_token;
