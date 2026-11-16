@@ -1274,6 +1274,8 @@ const api = async (fn, ...args) => {
 
       // Filter role OPD
       if (isOpd(state.role)) all = all.filter(p => p.opd_pengaju === state.satker);
+      // Pokja hanya melihat paket yang didelegasikan kepadanya oleh Admin
+      if (isPokja(state.role)) all = all.filter(p => p.pokja_ditugaskan === state.username);
 
       // Hitung ringkasan dari SEMUA data (sebelum filter status/cari)
       const j = { Pending: 0, Revisi: 0, Disetujui: 0, Ditolak: 0 };
@@ -1322,6 +1324,7 @@ const api = async (fn, ...args) => {
           Tahap                  : p.tahap || 1,
           UndanganKlarifikasi    : p.undangan_klarifikasi || null,
           RiwayatPenyedia        : p.riwayat_penyedia || [],
+          PokjaDitugaskan        : p.pokja_ditugaskan || '',
           VerifikatorTahap1      : p.verifikator_tahap1,
           TglTahap1              : p.tgl_verifikasi_tahap1,
           VerifikatorTahap2      : p.verifikator_tahap2,
@@ -1478,18 +1481,27 @@ const api = async (fn, ...args) => {
 
     /* ---- UBAH STATUS (Admin / Pokja) ---- */
     case 'ubahStatus': {
-      const [id, statusBaru, catatan, items] = args;
+      const [id, statusBaru, catatan, itemsArg, opsi] = args;
+      const items = itemsArg || {};
       const ref = fbDb.collection('pengajuan').doc(id);
 
       const updateData = {
         status      : statusBaru,
         catatan_umum: statusBaru === 'Disetujui' ? '' : catatan,
-        catatan_item: items || {}
+        catatan_item: items
       };
+      let infoDelegasi = '';
       if (statusBaru === 'Menunggu Verifikasi Tahap 2') {
         updateData.tahap = 2;
         updateData.verifikator_tahap1 = state.username;
         updateData.tgl_verifikasi_tahap1 = new Date().toISOString();
+        // Delegasi ke Pokja yang akan memverifikasi dokumen
+        if (opsi && opsi.pokja) {
+          updateData.pokja_ditugaskan = opsi.pokja;
+          updateData.pokja_didelegasikan_oleh = state.username;
+          updateData.tgl_delegasi_pokja = new Date().toISOString();
+          infoDelegasi = '\nDidelegasikan kepada Pokja: ' + opsi.pokja;
+        }
       } else if (statusBaru === 'Disetujui' || statusBaru === 'Revisi Dokumen') {
         updateData.tahap = 2;
         updateData.verifikator_tahap2 = state.username;
@@ -1498,7 +1510,7 @@ const api = async (fn, ...args) => {
 
       await ref.update(updateData);
 
-      let pesan = '[Status: ' + statusBaru + ']' + (catatan ? ' ' + catatan : '');
+      let pesan = '[Status: ' + statusBaru + ']' + (catatan ? ' ' + catatan : '') + infoDelegasi;
       Object.keys(ITEM_TOLAK).forEach(k => { if (items[k]) pesan += '\n- ' + ITEM_TOLAK[k] + ': ' + items[k]; });
 
       await ref.collection('klarifikasi').add({
@@ -1506,7 +1518,25 @@ const api = async (fn, ...args) => {
         created_at: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      return { ok: true, message: 'Status ' + id + ' diubah menjadi ' + statusBaru + '.' };
+      return { ok: true, message: 'Status ' + id + ' diubah menjadi ' + statusBaru + (opsi && opsi.pokja ? ' dan didelegasikan ke Pokja ' + opsi.pokja : '') + '.' };
+    }
+
+    /* ---- DELEGASI / GANTI POKJA (Admin) ---- */
+    case 'delegasiPokja': {
+      const [id, pokja] = args;
+      if (!pokja) throw new Error('Pilih Pokja terlebih dahulu.');
+      const ref = fbDb.collection('pengajuan').doc(id);
+      await ref.update({
+        pokja_ditugaskan: pokja,
+        pokja_didelegasikan_oleh: state.username,
+        tgl_delegasi_pokja: new Date().toISOString()
+      });
+      await ref.collection('klarifikasi').add({
+        pengirim: state.username, role: state.role,
+        pesan: '[Delegasi Pokja] Verifikasi dokumen pengajuan didelegasikan kepada Pokja: ' + pokja,
+        created_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return { ok: true, message: 'Pengajuan ' + id + ' didelegasikan ke Pokja ' + pokja + '.' };
     }
 
     /* ---- KLARIFIKASI / CHAT ---- */
@@ -1889,9 +1919,12 @@ function aksiKartu(p) {
   if (isAdmin(role)) {
     const isTahap1 = p.Status === 'Pending' || p.Status === 'Menunggu Verifikasi Tahap 1' || p.Status === 'Undangan Klarifikasi';
     return (isTahap1
-      ? '<button class="btn btn-sm btn-ok" data-act="Tahap1_Setuju" data-id="' + id + '"><i class="bi bi-check2-circle me-1"></i>Lolos Tahap 1</button>' +
+      ? '<button class="btn btn-sm btn-ok" data-act="Tahap1_Setuju" data-id="' + id + '" title="Setujui dan delegasikan ke Pokja"><i class="bi bi-check2-circle me-1"></i>Lolos Tahap 1</button>' +
         '<button class="btn btn-sm btn-no" data-act="Tahap1_Tolak" data-id="' + id + '" title="Tolak penyedia agar OPD mengganti penyedia"><i class="bi bi-x-circle me-1"></i>Tolak Penyedia</button>'
       : '') +
+      ((p.Status === 'Menunggu Verifikasi Tahap 2' || p.Status === 'Revisi Dokumen')
+        ? '<button class="btn btn-sm btn-line" data-act="delegasi" data-id="' + id + '" title="Delegasikan / ganti Pokja verifikator"><i class="bi bi-person-lines-fill me-1 text-info"></i>' + (p.PokjaDitugaskan ? 'Ganti Pokja' : 'Delegasikan') + '</button>'
+        : '') +
       '<button class="btn btn-sm btn-line" data-act="cetak-kertas" data-id="' + id + '" title="Lihat / Cetak Kertas Kerja"><i class="bi bi-printer me-1 text-warning"></i>Kertas Kerja</button>' +
       '<button class="btn btn-sm btn-line text-warning" data-act="undangklarif" data-id="' + id + '" title="Kirim Undangan Klarifikasi Rapat"><i class="bi bi-envelope-paper me-1"></i>Undang</button>' +
       '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text"></i></button>';
@@ -1932,6 +1965,7 @@ function kartu(p) {
         (nonUmkk ? '<span class="badge bg-primary-subtle text-primary ms-1">Non UMKK</span>' : '<span class="badge bg-warning-subtle text-warning ms-1">UMKK</span>') +
       '</div>' +
       '<div class="p-meta">' + esc(p.Jenis_Tenaga_Alih_Daya) + '</div>' +
+      (p.PokjaDitugaskan ? '<div class="p-meta"><i class="bi bi-person-check me-1 text-info"></i>Pokja verifikator: <b>' + esc(p.PokjaDitugaskan) + '</b></div>' : '') +
       '<div class="p-meta faint">' + esc(p.ID_Pengajuan) + ', ' + esc(p.Timestamp) + '</div>' +
       bannerUndangan(p) +
       '<div class="dchips">' + dokChips(p) + '</div>' + etalase(p.Link_Katalog) + catatanBox(p) +
@@ -2216,6 +2250,7 @@ document.addEventListener('click', e => {
   if (act === 'undangklarif') return bukaModalUndangan(id);
   
   // Aksi Verifikasi Tahap 1 & Tahap 2
+  if (act === 'delegasi') return bukaDelegasi(id);
   if (act === 'Tahap1_Setuju') return bukaAksi(id, 'Menunggu Verifikasi Tahap 2', 'Setujui Verifikasi Tahap 1 (Lanjut ke Pokja)');
   if (act === 'Tahap1_Tolak') return bukaAksi(id, 'Penyedia Ditolak', 'Tolak Penyedia (Minta OPD Ganti Penyedia)');
   if (act === 'Tahap2_Setuju') return bukaAksi(id, 'Disetujui', 'Setujui Dokumen Persiapan Final');
@@ -2811,23 +2846,73 @@ document.addEventListener('change', e => {
   const t = $('#ia-' + c.dataset.item); t.style.display = c.checked ? '' : 'none'; if (c.checked) t.focus();
 });
 
-function bukaAksi(id, statusBaru, customJudul) {
+// Isi pilihan Pokja (akun Pokja berstatus Aktif). Mengembalikan jumlah Pokja yang tersedia.
+async function isiPilihanPokja(terpilih) {
+  if (!state.akun) { try { await muatAkun(); } catch (e) {} }
+  const daftar = (state.akun || []).filter(a => a.role === 'Pokja' && a.status === 'Aktif');
+  $('#aksiPokja').innerHTML = '<option value="">- Pilih Pokja -</option>' + daftar.map(a =>
+    '<option value="' + esc(a.username) + '"' + (a.username === terpilih ? ' selected' : '') + '>' + esc(a.username) + (a.satker ? ' - ' + esc(a.satker) : '') + '</option>').join('');
+  $('#aksiPokjaNote').textContent = daftar.length
+    ? 'Paket ini akan muncul di daftar verifikasi dokumen milik Pokja yang dipilih.'
+    : 'Belum ada akun Pokja aktif. Buat akun Pokja di tab Kelola Pengguna terlebih dahulu.';
+  return daftar.length;
+}
+
+async function bukaAksi(id, statusBaru, customJudul) {
   const p = state.list.find(x => x.ID_Pengajuan === id); if (!p) return;
   if (statusBaru === 'Disetujui' && !p.DokLengkap) { toast('Dokumen KAK dan HPS harus lengkap sebelum disetujui final.', 'warning'); return; }
-  
+
+  // Penentuan jenis aksi (status "Penyedia Ditolak" / "Ditolak" tidak mengandung kata "Tolak" berhuruf besar)
+  const tolakPenyedia = statusBaru === 'Penyedia Ditolak';
+  const isTolak = /tolak/i.test(statusBaru);
+  const isRevisi = /revisi/i.test(statusBaru);
+  const delegasi = statusBaru === 'Menunggu Verifikasi Tahap 2';
+
   state.konfirmasiAksi = { id, status: statusBaru };
   $('#aksiJudul').textContent = customJudul || statusBaru;
   $('#aksiInfo').innerHTML = '<div class="fw-bold">' + esc(p.Nama_Paket) + '</div><div class="small-note text-muted">Penyedia: ' + esc(p.Calon_Penyedia) + ' &bull; HPS: ' + rp(p.Nilai_HPS) + '</div>';
-  $('#aksiLabel').textContent = statusBaru.includes('Revisi') || statusBaru.includes('Tolak') ? 'Catatan / Alasan' : 'Catatan (Opsional)';
+  $('#aksiLabel').textContent = tolakPenyedia ? 'Alasan Penolakan Penyedia (wajib)' : (isRevisi || isTolak) ? 'Catatan / Alasan' : 'Catatan (Opsional)';
   $('#aksiCatatan').value = '';
-  
-  const butuhItem = statusBaru.includes('Revisi') || statusBaru.includes('Tolak');
-  renderItemAksi(butuhItem);
+  $('#aksiHint').textContent = tolakPenyedia ? 'Alasan ini akan dilihat OPD, lalu OPD dapat memilih penyedia pengganti.' : '';
 
+  // Penolakan penyedia cukup dengan alasan; item dokumen hanya untuk revisi / penolakan dokumen
+  renderItemAksi((isRevisi || isTolak) && !tolakPenyedia);
+
+  // Delegasi ke Pokja hanya saat Admin meloloskan Tahap 1
+  $('#aksiPokjaWrap').style.display = delegasi ? '' : 'none';
+  $('#aksiPokjaLabel').textContent = 'Delegasikan ke Pokja (verifikator dokumen)';
   const ok = $('#btnAksiOk');
-  ok.className = 'btn ' + (statusBaru.includes('Tolak') ? 'btn-no' : statusBaru.includes('Revisi') ? 'btn-warn' : 'btn-ok');
-  ok.textContent = statusBaru.includes('Tolak') ? 'Konfirmasi Penolakan' : statusBaru.includes('Revisi') ? 'Kirim Permintaan Revisi' : 'Setujui Pengajuan';
-  
+  ok.disabled = false;
+  if (delegasi) { const n = await isiPilihanPokja(p.PokjaDitugaskan); ok.disabled = !n; }
+
+  ok.className = 'btn ' + (isTolak ? 'btn-no' : isRevisi ? 'btn-warn' : 'btn-ok');
+  ok.textContent = tolakPenyedia ? 'Konfirmasi Tolak Penyedia'
+                 : isTolak ? 'Konfirmasi Penolakan'
+                 : isRevisi ? 'Kirim Permintaan Revisi'
+                 : delegasi ? 'Setujui & Delegasikan ke Pokja'
+                 : 'Setujui Pengajuan';
+
+  bootstrap.Modal.getOrCreateInstance($('#modalAksi')).show();
+}
+
+// Admin: delegasikan / ganti Pokja pada paket yang sudah lolos Tahap 1
+async function bukaDelegasi(id) {
+  const p = state.list.find(x => x.ID_Pengajuan === id); if (!p) return;
+  state.konfirmasiAksi = { id, status: p.Status, delegasiSaja: true };
+  $('#aksiJudul').textContent = p.PokjaDitugaskan ? 'Ganti Pokja Verifikator' : 'Delegasikan ke Pokja';
+  $('#aksiInfo').innerHTML = '<div class="fw-bold">' + esc(p.Nama_Paket) + '</div><div class="small-note text-muted">Penyedia: ' + esc(p.Calon_Penyedia) + ' &bull; HPS: ' + rp(p.Nilai_HPS) + (p.PokjaDitugaskan ? ' &bull; Pokja saat ini: <b>' + esc(p.PokjaDitugaskan) + '</b>' : '') + '</div>';
+  renderItemAksi(false);
+  $('#aksiCatatan').value = '';
+  $('#aksiLabel').textContent = 'Catatan (Opsional)';
+  $('#aksiHint').textContent = '';
+  $('#aksiPokjaWrap').style.display = '';
+  $('#aksiPokjaLabel').textContent = 'Pokja verifikator';
+  const ok = $('#btnAksiOk');
+  ok.className = 'btn btn-ok';
+  ok.textContent = 'Simpan Delegasi';
+  ok.disabled = false;
+  const n = await isiPilihanPokja(p.PokjaDitugaskan);
+  ok.disabled = !n;
   bootstrap.Modal.getOrCreateInstance($('#modalAksi')).show();
 }
 
@@ -2839,9 +2924,15 @@ $('#btnAksiOk').addEventListener('click', async () => {
     const v = $('#ia-' + c.dataset.item).value.trim();
     if (v) items[c.dataset.item] = v;
   });
+  const perluPokja = k.delegasiSaja || k.status === 'Menunggu Verifikasi Tahap 2';
+  const pokja = perluPokja ? $('#aksiPokja').value : '';
+  if (perluPokja && !pokja) { toast('Pilih Pokja yang akan memverifikasi dokumen.', 'warning'); $('#aksiPokja').focus(); return; }
+  if (k.status === 'Penyedia Ditolak' && !catatan) { toast('Isi alasan penolakan penyedia agar OPD tahu yang perlu diganti.', 'warning'); $('#aksiCatatan').focus(); return; }
   const btn = $('#btnAksiOk'); busy(btn, true, 'Menyimpan');
   try {
-    const res = await call('ubahStatus', k.id, k.status, catatan, items);
+    const res = k.delegasiSaja
+      ? await call('delegasiPokja', k.id, pokja)
+      : await call('ubahStatus', k.id, k.status, catatan, items, perluPokja ? { pokja } : null);
     bootstrap.Modal.getOrCreateInstance($('#modalAksi')).hide();
     toast(res.message, 'success');
     await muatData();
