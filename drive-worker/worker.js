@@ -108,16 +108,16 @@ async function driveToken(env) {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: env.GOOGLE_CLIENT_ID,
-      client_secret: env.GOOGLE_CLIENT_SECRET,
-      refresh_token: env.GOOGLE_REFRESH_TOKEN,
+      client_id: String(env.GOOGLE_CLIENT_ID || '').trim(),
+      client_secret: String(env.GOOGLE_CLIENT_SECRET || '').trim(),
+      refresh_token: String(env.GOOGLE_REFRESH_TOKEN || '').trim(),
       grant_type: 'refresh_token'
     })
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) {
     console.error('Refresh token gagal:', JSON.stringify(j));
-    throw new HttpError(502, 'Layanan Drive belum dapat diakses. Kode dari Google: ' + (j.error || r.status) + '. Periksa kredensial Worker.');
+    throw new HttpError(502, 'Layanan Drive belum dapat diakses. Kode dari Google: ' + (j.error || r.status) + (j.error_description ? ' (' + String(j.error_description).slice(0, 120) + ')' : '') + '. Periksa kredensial Worker.');
   }
   tokenCache = { value: j.access_token, exp: now + (j.expires_in || 3600) * 1000 };
   return j.access_token;
