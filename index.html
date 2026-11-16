@@ -868,7 +868,7 @@ const fbAuth = firebase.auth();
 const fbDb  = firebase.firestore();
 /* Penyimpanan berkas: Google Drive lewat Cloudflare Worker (lihat folder drive-worker/).
  * Isi DRIVE_WORKER_URL dengan alamat Worker setelah deploy. Firestore hanya menyimpan metadata. */
-const DRIVE_WORKER_URL = 'https://GANTI-DENGAN-URL-WORKER.workers.dev';
+const DRIVE_WORKER_URL = 'https://pengajuanoc2027.wafinance.workers.dev';
 
 async function tokenFirebase() {
   if (!fbAuth.currentUser && typeof fbAuth.authStateReady === 'function') await fbAuth.authStateReady();
