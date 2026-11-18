@@ -336,6 +336,22 @@
     .dp-nama { font-weight: 700; margin: .25rem 0; }
     .dp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .35rem 1rem; font-size: .84rem; color: var(--muted); } .dp-grid b { color: var(--text); }
 
+    /* ---------- Segmen, toolbar tab, List View ---------- */
+    .seg { display: inline-flex; border: 1px solid var(--line2); border-radius: 9px; overflow: hidden; background: var(--card); }
+    .seg button { border: 0; background: transparent; color: var(--muted); font-weight: 700; font-size: .8rem; padding: .42rem .9rem; display: inline-flex; align-items: center; gap: .4rem; }
+    .seg button:hover { background: var(--hover); color: var(--text); }
+    .seg button.on { background: var(--accent); color: var(--accent-ink); }
+    .seg button b { font-weight: 800; opacity: .7; }
+    .grup-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: .4rem 0 .2rem; }
+    .tools { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .tools .search input { min-width: 240px; }
+    .tools select { width: auto; background-color: var(--card); border-color: var(--line2); color: var(--text); border-radius: 999px; padding-left: .9rem; }
+    .lv td { vertical-align: middle; }
+    .lv .lv-nama { font-weight: 700; }
+    .lv .lv-sub { font-size: .76rem; color: var(--muted); margin-top: .15rem; }
+    .lv .lv-acts { display: flex; flex-wrap: wrap; gap: .3rem; justify-content: flex-end; }
+    .lv .undangan-banner, .lv .cat-box { max-width: 460px; }
+
     /* ---------- Tombol tema ---------- */
     .btn-tema { width: 38px; height: 38px; padding: 0; display: inline-grid; place-items: center; border-radius: 50%; }
     [data-bs-theme="dark"] .ic-moon, [data-bs-theme="light"] .ic-sun { display: none; }
@@ -555,9 +571,11 @@
 
     <!-- Pane 1: Daftar Pengajuan -->
     <div id="paneList">
+      <div class="grup-bar" id="grupBar" style="display:none"></div>
       <div class="toolbar">
         <div><h2 class="sec-title" id="listTitle">Pengajuan</h2><div class="small-note" id="listCount"></div></div>
         <div class="d-flex flex-wrap gap-2 align-items-center">
+          <div class="seg" id="viewToggle" style="display:none"><button type="button" data-view="grid"><i class="bi bi-grid-3x3-gap-fill"></i>Grid View</button><button type="button" data-view="list"><i class="bi bi-list-ul"></i>List View</button></div>
           <div class="chips" id="chips"></div>
           <div class="search"><i class="bi bi-search"></i><input id="fltCari" placeholder="Cari paket, penyedia, atau OPD"></div>
         </div>
@@ -569,6 +587,13 @@
     <!-- Pane 2: Akumulasi Per Penyedia (Admin) -->
     <div id="panePen" style="display:none">
       <div class="small-note mb-3" id="penNote"></div>
+      <div class="tools">
+        <div class="search"><i class="bi bi-search"></i><input id="cariPen" placeholder="Cari nama penyedia"></div>
+        <div class="d-flex flex-wrap gap-2">
+          <select class="form-select form-select-sm" id="katPen" aria-label="Kategori penyedia"><option value="">Semua kategori</option><option value="umkk">UMKK</option><option value="non">Non UMKK</option></select>
+          <select class="form-select form-select-sm" id="urutPen" aria-label="Urutkan nilai"><option value="desc">Nilai tertinggi ke terendah</option><option value="asc">Nilai terendah ke tertinggi</option><option value="nama">Nama A-Z</option></select>
+        </div>
+      </div>
       <div class="table-responsive">
         <table class="tbl">
           <thead><tr><th>Penyedia</th><th>Kategori</th><th>Akumulasi HPS</th><th style="text-align:right">Total Nilai</th><th>Status Batas Kuota</th></tr></thead>
@@ -577,12 +602,26 @@
       </div>
     </div>
 
+    <!-- Pane: List Pokja (Admin) -->
+    <div id="panePokja" style="display:none">
+      <div class="small-note mb-3">Daftar Pokja beserta paket yang didelegasikan. Klik nama Pokja untuk membuka atau menutup rincian paket.</div>
+      <div class="tools">
+        <div class="search"><i class="bi bi-search"></i><input id="cariPokja" placeholder="Cari Pokja, paket, OPD, atau penyedia"></div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-line btn-sm" data-act="pokja-semua" data-buka="1">Buka semua</button>
+          <button type="button" class="btn btn-line btn-sm" data-act="pokja-semua" data-buka="0">Tutup semua</button>
+        </div>
+      </div>
+      <div id="listPokja"></div>
+    </div>
+
     <!-- Pane 3: Kelola Akun Pengguna (Admin) -->
     <div id="paneAkun" style="display:none">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="small-note">Kelola pengguna sistem (OPD, Pokja, dan Admin). Admin dapat membuat akun langsung.</div>
         <button class="btn btn-main btn-sm" id="btnBukaModalBuatAkun"><i class="bi bi-person-plus-fill me-1"></i> Buat Akun Baru</button>
       </div>
+      <div class="tools"><div class="search"><i class="bi bi-search"></i><input id="cariAkun" placeholder="Cari satker, username, email, atau role"></div></div>
       <div class="table-responsive">
         <table class="tbl">
           <thead><tr><th>Satker</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th style="text-align:right">Tindakan</th></tr></thead>
@@ -1001,6 +1040,18 @@ const NON_UMKK_LIST = [
   'pt muhandas permata sarana'
 ];
 
+// Produk Konsolidasi = jenis tenaga yang ada di daftar referensi (9 produk). Di luar daftar = Non Konsolidasi.
+function isKonsolidasi(jenis) {
+  if (!state.ref || !state.ref.jenis || !state.ref.jenis.length) return true;
+  const n = normNama(jenis);
+  return state.ref.jenis.some(j => normNama(j) === n);
+}
+const STATUS_TAHAP1 = ['Menunggu Verifikasi Tahap 1', 'Pending', 'Undangan Klarifikasi', 'Penyedia Ditolak'];
+function badgeGrup(k) {
+  return k === false ? '<span class="badge bg-secondary-subtle text-secondary ms-1">Non Konsolidasi</span>'
+                     : '<span class="badge bg-success-subtle text-success ms-1">Konsolidasi</span>';
+}
+
 const normNama = s => String(s || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
 function isNonUmkk(nama) {
   const n = normNama(nama);
@@ -1053,7 +1104,9 @@ const state = {
   username: null, role: null, email: null, ringkasan: null, list: [], total: 0, halaman: 1, memuat: false,
   filter: '', cari: '', tab: 'pengajuan', penyedia: null, pen: { nama: '', total: 0, jumlah: 0, ada: false, isNonUmkk: false },
   satker: '', ref: null, akun: null, detId: 0, editingId: null, dokId: null, konfirmasiAksi: null, klarId: null, klarSub: null,
-  expandedOpd: {} // Menyimpan state toggle OPD di tampilan Admin / Pokja
+  expandedOpd: {}, // Menyimpan state toggle OPD di tampilan Admin / Pokja
+  view: (function () { try { return localStorage.getItem('pengajuan_view') === 'list' ? 'list' : 'grid'; } catch (e) { return 'grid'; } })(),
+  grup: 'konsolidasi', deleg: {}
 };
 
 function toast(msg, type) {
@@ -1305,6 +1358,22 @@ const api = async (fn, ...args) => {
       let all = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
       if (!isAdmin(state.role)) all.sort((a, b) => msUrut(b.created_at) - msUrut(a.created_at));
 
+      // Kelompok Konsolidasi / Non Konsolidasi (berdasarkan jenis tenaga alih daya)
+      if (!state.ref) await muatReferensi();
+      const konsOf = p => isKonsolidasi(p.jenis_tenaga_alih_daya);
+      const grupAll = { konsolidasi: 0, non: 0 };
+      all.forEach(p => { grupAll[konsOf(p) ? 'konsolidasi' : 'non']++; });
+      // Paket yang sedang didelegasikan per Pokja (untuk Admin)
+      const delegasi = {};
+      if (isAdmin(state.role)) all.forEach(p => {
+        if (!p.pokja_ditugaskan || STATUS_TAHAP1.indexOf(p.status) >= 0) return;
+        (delegasi[p.pokja_ditugaskan] = delegasi[p.pokja_ditugaskan] || []).push({
+          id: p._id, nama: p.nama_paket, opd: p.opd_pengaju, penyedia: p.calon_penyedia, jenis: p.jenis_tenaga_alih_daya,
+          jumlah: p.jumlah_tenaga, hps: Number(p.nilai_hps) || 0, status: p.status, tgl: p.tgl_delegasi_pokja || '', kons: konsOf(p)
+        });
+      });
+      if (opsi.grup && !isOpd(state.role)) all = all.filter(p => (opsi.grup === 'konsolidasi') === konsOf(p));
+
       // Hitung ringkasan dari SEMUA data (sebelum filter status/cari)
       const j = { Pending: 0, Revisi: 0, Disetujui: 0, Ditolak: 0 };
       let tot = 0;
@@ -1353,6 +1422,7 @@ const api = async (fn, ...args) => {
           UndanganKlarifikasi    : p.undangan_klarifikasi || null,
           RiwayatPenyedia        : p.riwayat_penyedia || [],
           PokjaDitugaskan        : p.pokja_ditugaskan || '',
+          Konsolidasi            : konsOf(p),
           VerifikatorTahap1      : p.verifikator_tahap1,
           TglTahap1              : p.tgl_verifikasi_tahap1,
           VerifikatorTahap2      : p.verifikator_tahap2,
@@ -1368,7 +1438,7 @@ const api = async (fn, ...args) => {
         };
       });
 
-      return { list, total: filtered.length, halaman: hal, ukuran: uk, ringkasan: { total: tot, limit: LIMIT, jumlah: j } };
+      return { list, total: filtered.length, halaman: hal, ukuran: uk, ringkasan: { total: tot, limit: LIMIT, jumlah: j, grup: grupAll }, delegasi };
     }
 
     /* ---- AKUMULASI PER PENYEDIA ---- */
@@ -1799,7 +1869,7 @@ $('#loginForm').addEventListener('submit', async e => {
 $('#btnLogout').addEventListener('click', () => keluar());
 
 function mulaiSesi(s) {
-  Object.assign(state, { username: s.username, role: s.role, email: s.email, tab: 'pengajuan', filter: '', cari: '', satker: s.satker || '', akun: null });
+  Object.assign(state, { username: s.username, role: s.role, email: s.email, tab: 'pengajuan', filter: '', cari: '', grup: 'konsolidasi', deleg: {}, satker: s.satker || '', akun: null });
   const opd = isOpd(s.role);
   const admin = isAdmin(s.role);
   const pokja = isPokja(s.role);
@@ -1825,7 +1895,9 @@ function mulaiSesi(s) {
 
   $('#fltCari').value = '';
   tampil('appView');
+  ['cariPen', 'cariAkun', 'cariPokja'].forEach(i => { $('#' + i).value = ''; });
   resetForm(); tutupForm();
+  renderView(); renderGrupBar();
   renderTab();
   muatData();
   if (!state.ref) muatReferensi();
@@ -1837,12 +1909,12 @@ async function muatData(tambah) {
   state.memuat = true;
   if (!tambah) renderGrid();
   try {
-    const r = await call('getPengajuan', { halaman: state.halaman, ukuran: UKURAN_HALAMAN, status: state.filter, cari: state.cari });
+    const r = await call('getPengajuan', { halaman: state.halaman, ukuran: UKURAN_HALAMAN, status: state.filter, cari: state.cari, grup: isOpd(state.role) ? '' : state.grup });
     state.list = tambah ? state.list.concat(r.list) : r.list;
-    state.total = r.total; state.ringkasan = r.ringkasan;
+    state.total = r.total; state.ringkasan = r.ringkasan; state.deleg = r.delegasi || {};
   } catch (e) { gagal(e); }
   state.memuat = false;
-  renderKuota(); renderChips(); renderGrid(); renderPenyediaInfo();
+  renderKuota(); renderChips(); renderGrupBar(); renderGrid(); renderPenyediaInfo(); renderPokja();
   if (isAdmin(state.role) && state.tab === 'penyedia') muatPenyedia();
 }
 
@@ -2007,13 +2079,46 @@ function kartu(p) {
       '<div class="p-meta">Penyedia: <b>' + esc(p.Calon_Penyedia) + '</b> ' +
         (nonUmkk ? '<span class="badge bg-primary-subtle text-primary ms-1">Non UMKK</span>' : '<span class="badge bg-warning-subtle text-warning ms-1">UMKK</span>') +
       '</div>' +
-      '<div class="p-meta">' + esc(p.Jenis_Tenaga_Alih_Daya) + '</div>' +
+      '<div class="p-meta">' + esc(p.Jenis_Tenaga_Alih_Daya) + badgeGrup(p.Konsolidasi) + '</div>' +
       (p.PokjaDitugaskan ? '<div class="p-meta"><i class="bi bi-person-check me-1 text-info"></i>Pokja verifikator: <b>' + esc(p.PokjaDitugaskan) + '</b></div>' : '') +
       '<div class="p-meta faint">' + esc(p.ID_Pengajuan) + ', ' + esc(p.Timestamp) + '</div>' +
       bannerUndangan(p) +
       '<div class="dchips">' + dokChips(p) + '</div>' + etalase(p.Link_Katalog) + catatanBox(p) +
       '<div class="p-acts">' + aksiKartu(p) + '</div>' +
     '</div></article>';
+}
+
+// List View ringkas mendatar (gaya tabel SPSE) untuk OPD
+function tabelList(list) {
+  if (!list.length) return '<div class="empty"><i class="bi bi-inbox"></i>' + (state.filter || state.cari ? 'Tidak ada pengajuan yang cocok.' : 'Belum ada pengajuan dari OPD Anda.') + '</div>';
+  return '<div class="table-responsive"><table class="tbl lv"><thead><tr><th>No</th><th>Paket</th><th>Penyedia</th><th style="text-align:right">HPS</th><th>Status</th><th style="text-align:right">Aksi</th></tr></thead><tbody>' +
+    list.map((p, i) => '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td style="min-width:260px"><div class="lv-nama">' + esc(p.Nama_Paket) + '</div>' +
+        '<div class="lv-sub">' + esc(p.ID_Pengajuan) + ', ' + esc(p.Timestamp) + '</div>' +
+        '<div class="lv-sub">' + esc(p.Jenis_Tenaga_Alih_Daya) + ', ' + p.Jumlah_Tenaga + ' orang' + badgeGrup(p.Konsolidasi) + '</div>' +
+        bannerUndangan(p) + catatanBox(p) + '</td>' +
+      '<td>' + esc(p.Calon_Penyedia) + (isNonUmkk(p.Calon_Penyedia) ? '<span class="badge bg-primary-subtle text-primary ms-1">Non UMKK</span>' : '<span class="badge bg-warning-subtle text-warning ms-1">UMKK</span>') + '</td>' +
+      '<td class="num">' + rp(p.Nilai_HPS) + '</td>' +
+      '<td>' + badgeStatus(p.Status) + '</td>' +
+      '<td><div class="lv-acts">' + aksiKartu(p) + '</div></td>' +
+    '</tr>').join('') + '</tbody></table></div>';
+}
+
+function renderView() {
+  $('#viewToggle').style.display = isOpd(state.role) ? '' : 'none';
+  document.querySelectorAll('#viewToggle button').forEach(b => b.classList.toggle('on', b.dataset.view === state.view));
+}
+
+// Admin & Pokja: pemisah Group Konsolidasi / Non Konsolidasi
+function renderGrupBar() {
+  const bar = $('#grupBar');
+  if (!state.role || isOpd(state.role)) { bar.style.display = 'none'; return; }
+  const g = (state.ringkasan && state.ringkasan.grup) || { konsolidasi: 0, non: 0 };
+  bar.style.display = '';
+  bar.innerHTML = '<div class="seg">' + [['konsolidasi', 'Konsolidasi', g.konsolidasi], ['non', 'Non Konsolidasi', g.non]].map(d =>
+    '<button type="button" data-grup="' + d[0] + '" class="' + (state.grup === d[0] ? 'on' : '') + '">' + d[1] + ' <b>' + d[2] + '</b></button>').join('') + '</div>' +
+    '<span class="small-note">' + (state.grup === 'konsolidasi' ? 'Jenis tenaga sesuai daftar produk konsolidasi.' : 'Jenis tenaga di luar daftar produk konsolidasi.') + '</span>';
 }
 
 /* Fitur 4: Render Grid Pengajuan - Dibuat Per OPD untuk Admin & Pokja */
@@ -2030,13 +2135,17 @@ function renderGrid() {
 
   // Untuk OPD: Tampilan kartu langsung
   if (opdUser) {
-    html = '<div class="grid">';
-    if (!state.filter && !state.cari) {
-      html += '<button class="add-card" data-act="baru"><i class="bi bi-plus-circle"></i>Ajukan paket baru</button>';
+    if (state.view === 'list') {
+      html = tabelList(state.list);
+    } else {
+      html = '<div class="grid">';
+      if (!state.filter && !state.cari) {
+        html += '<button class="add-card" data-act="baru"><i class="bi bi-plus-circle"></i>Ajukan paket baru</button>';
+      }
+      html += state.list.map(kartu).join('');
+      if (!state.list.length) html += '<div class="empty"><i class="bi bi-inbox"></i>Belum ada pengajuan dari OPD Anda.</div>';
+      html += '</div>';
     }
-    html += state.list.map(kartu).join('');
-    if (!state.list.length) html += '<div class="empty"><i class="bi bi-inbox"></i>Belum ada pengajuan dari OPD Anda.</div>';
-    html += '</div>';
     g.innerHTML = html;
   } else {
     // Untuk Admin & Pokja: DIKELOMPOKKAN PER OPD (Fitur 4)
@@ -2130,30 +2239,55 @@ function renderTab() {
   const pokja = isPokja(state.role);
   const tabs = $('#tabs');
   tabs.style.display = (admin || pokja) ? '' : 'none';
-  
-  if (!admin && !pokja) {
-    $('#paneList').style.display = '';
-    $('#panePen').style.display = 'none';
-    $('#paneAkun').style.display = 'none';
-    return;
-  }
+  const t = (admin || pokja) ? state.tab : 'pengajuan';
+  const pane = { paneList: t === 'pengajuan', panePen: admin && t === 'penyedia', panePokja: admin && t === 'pokja', paneAkun: admin && t === 'akun' };
+  Object.keys(pane).forEach(k => { $('#' + k).style.display = pane[k] ? '' : 'none'; });
+  if (!admin && !pokja) return;
 
-  const t = state.tab;
   const menunggu = state.akun ? state.akun.filter(a => a.status === 'Menunggu').length : 0;
+  const tb = (k, teks) => '<button type="button" class="tab' + (t === k ? ' on' : '') + '" data-tab="' + k + '">' + teks + '</button>';
+  tabs.innerHTML = admin
+    ? tb('pengajuan', 'Pengajuan per OPD') + tb('penyedia', 'Akumulasi Penyedia (UMKK & Non UMKK)') + tb('pokja', 'List Pokja') + tb('akun', 'Kelola Pengguna' + (menunggu ? ' (' + menunggu + ')' : ''))
+    : tb('pengajuan', 'Verifikasi Dokumen (Tahap 2)');
+}
 
-  if (admin) {
-    tabs.innerHTML = '<button type="button" class="tab' + (t === 'pengajuan' ? ' on' : '') + '" data-tab="pengajuan">Pengajuan per OPD</button>' +
-      '<button type="button" class="tab' + (t === 'penyedia' ? ' on' : '') + '" data-tab="penyedia">Akumulasi Penyedia (UMKK & Non UMKK)</button>' +
-      '<button type="button" class="tab' + (t === 'akun' ? ' on' : '') + '" data-tab="akun">Kelola Pengguna' + (menunggu ? ' (' + menunggu + ')' : '') + '</button>';
-    $('#paneList').style.display = t === 'pengajuan' ? '' : 'none';
-    $('#panePen').style.display = t === 'penyedia' ? '' : 'none';
-    $('#paneAkun').style.display = t === 'akun' ? '' : 'none';
-  } else if (pokja) {
-    tabs.innerHTML = '<button type="button" class="tab' + (t === 'pengajuan' ? ' on' : '') + '" data-tab="pengajuan">Verifikasi Dokumen (Tahap 2)</button>';
-    $('#paneList').style.display = '';
-    $('#panePen').style.display = 'none';
-    $('#paneAkun').style.display = 'none';
-  }
+// Tab List Pokja: Pokja + paket yang didelegasikan (dapat dibuka/ditutup)
+function renderPokja() {
+  const box = $('#listPokja'); if (!box) return;
+  const q = ($('#cariPokja').value || '').trim().toLowerCase();
+  const peta = {};
+  (state.akun || []).filter(a => a.role === 'Pokja').forEach(a => { peta[a.username] = { nama: a.username, satker: a.satker || '', items: [] }; });
+  Object.keys(state.deleg || {}).forEach(k => { if (!peta[k]) peta[k] = { nama: k, satker: '', items: [] }; peta[k].items = state.deleg[k]; });
+  const rows = Object.values(peta).map(pk => {
+    const total = pk.items.length;
+    if (!q) return { ...pk, total };
+    const cocok = (pk.nama + ' ' + pk.satker).toLowerCase().includes(q);
+    const items = cocok ? pk.items : pk.items.filter(it => [it.nama, it.opd, it.penyedia, it.id].join(' ').toLowerCase().includes(q));
+    return (cocok || items.length) ? { ...pk, items, total } : null;
+  }).filter(Boolean).sort((x, y) => y.total - x.total || x.nama.localeCompare(y.nama));
+  if (!rows.length) { box.innerHTML = '<div class="empty"><i class="bi bi-people"></i>' + (q ? 'Tidak ada Pokja yang cocok.' : 'Belum ada akun Pokja.') + '</div>'; return; }
+  const tgl = v => v ? new Date(v).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+  box.innerHTML = rows.map(pk => {
+    const id = 'pk_' + pk.nama.replace(/[^a-zA-Z0-9]/g, '_');
+    const buka = !!q || state.expandedOpd[id] === true; // bawaan tertutup
+    const aktif = pk.items.filter(it => it.status === 'Menunggu Verifikasi Tahap 2' || it.status === 'Revisi Dokumen').length;
+    const selesai = pk.items.filter(it => it.status === 'Disetujui').length;
+    const hps = pk.items.reduce((n, it) => n + it.hps, 0);
+    const detail = pk.items.length ? pk.items.map(it =>
+      '<div class="dp-item"><div class="dp-top"><div class="dp-opd">' + esc(it.opd) + '</div><div class="d-flex align-items-center gap-1">' + badgeGrup(it.kons) + badgeStatus(it.status) + '</div></div>' +
+      '<div class="dp-nama">' + esc(it.nama) + '</div>' +
+      '<div class="dp-grid"><div>ID: <b>' + esc(it.id) + '</b></div><div>Penyedia: <b>' + esc(it.penyedia) + '</b></div><div>Jenis: <b>' + esc(it.jenis) + '</b></div>' +
+      '<div>HPS: <b>' + rp(it.hps) + '</b></div><div>Jumlah: <b>' + esc(it.jumlah) + ' orang</b></div><div>Didelegasikan: <b>' + tgl(it.tgl) + '</b></div></div></div>').join('')
+      : '<div class="small-note">' + (q ? 'Tidak ada paket yang cocok.' : 'Belum ada paket yang didelegasikan.') + '</div>';
+    return '<div class="opd-group-card" id="' + id + '"><div class="opd-header" data-toggle-opd="' + id + '">' +
+      '<div class="opd-title-wrap"><div class="opd-badge-avatar">' + esc(inisial(pk.nama)) + '</div><div><div class="opd-name">' + esc(pk.nama) + '</div>' +
+      '<div class="opd-stats-sub">' + (pk.satker ? esc(pk.satker) + ' &bull; ' : '') + '<b>' + pk.total + ' paket</b> didelegasikan &bull; Total HPS: <b class="text-warning">' + rp(hps) + '</b></div></div></div>' +
+      '<div class="d-flex align-items-center gap-2">' +
+      (aktif ? '<span class="badge bg-info-subtle text-info border border-info-subtle">' + aktif + ' menunggu verifikasi</span>' : '') +
+      (selesai ? '<span class="badge bg-success-subtle text-success border border-success-subtle">' + selesai + ' selesai</span>' : '') +
+      '<i class="bi bi-chevron-' + (buka ? 'up' : 'down') + ' ms-2 text-muted opd-chevron"></i></div></div>' +
+      '<div class="opd-content" style="display:' + (buka ? '' : 'none') + '">' + detail + '</div></div>';
+  }).join('');
 }
 
 async function muatAkun() {
@@ -2176,8 +2310,9 @@ async function sinkronLookup() {
   } catch (e) { console.warn('Sinkron login_lookup gagal:', e); }
 }
 function renderAkun() {
-  const rows = state.akun || [];
-  if (!rows.length) { $('#tbodyAkun').innerHTML = '<tr><td colspan="6"><div class="empty">Belum ada akun terdaftar.</div></td></tr>'; return; }
+  const qa = ($('#cariAkun').value || '').trim().toLowerCase();
+  const rows = (state.akun || []).filter(a => !qa || [a.satker, a.username, a.email, a.role, a.status].join(' ').toLowerCase().includes(qa));
+  if (!rows.length) { $('#tbodyAkun').innerHTML = '<tr><td colspan="6"><div class="empty">' + (qa ? 'Tidak ada akun yang cocok.' : 'Belum ada akun terdaftar.') + '</div></td></tr>'; return; }
   const kelas = { Menunggu: 'st-Pending', Aktif: 'st-Disetujui', Nonaktif: 'st-Ditolak' };
   const tmb = (u, st, teks, k) => '<button class="btn btn-sm ' + k + '" data-act="akun" data-user="' + esc(u) + '" data-status="' + st + '">' + teks + '</button>';
   
@@ -2250,11 +2385,14 @@ function miniRuler(base, tambah) {
 }
 
 function renderPenyedia() {
-  const rows = state.penyedia || [];
   $('#penNote').textContent = 'Penyedia UMKK memiliki batas maksimal akumulasi Rp 15 Miliar. Penyedia Non UMKK diizinkan lebih dari Rp 15 Miliar.';
-  if (!rows.length) { $('#tbodyPen').innerHTML = '<tr><td colspan="5"><div class="empty">Belum ada penyedia.</div></td></tr>'; return; }
-  
-  $('#tbodyPen').innerHTML = rows.map((v, i) => {
+  const qp = ($('#cariPen').value || '').trim().toLowerCase(), kat = $('#katPen').value, urut = $('#urutPen').value;
+  const rows = (state.penyedia || []).map((v, i) => ({ v, i }))
+    .filter(x => (!qp || x.v.nama.toLowerCase().includes(qp)) && (!kat || (kat === 'non') === !!x.v.isNonUmkk));
+  rows.sort(urut === 'asc' ? (a, b) => a.v.total - b.v.total : urut === 'nama' ? (a, b) => a.v.nama.localeCompare(b.v.nama) : (a, b) => b.v.total - a.v.total);
+  if (!rows.length) { $('#tbodyPen').innerHTML = '<tr><td colspan="5"><div class="empty">' + ((qp || kat) ? 'Tidak ada penyedia yang cocok.' : 'Belum ada penyedia.') + '</div></td></tr>'; return; }
+
+  $('#tbodyPen').innerHTML = rows.map(({ v, i }) => {
     const nonUmkk = v.isNonUmkk;
     const pct = v.total / LIMIT * 100;
     
@@ -2279,6 +2417,10 @@ function renderPenyedia() {
   }).join('');
 }
 
+['cariPen', 'katPen', 'urutPen'].forEach(i => $('#' + i).addEventListener(i === 'cariPen' ? 'input' : 'change', renderPenyedia));
+$('#cariAkun').addEventListener('input', renderAkun);
+$('#cariPokja').addEventListener('input', renderPokja);
+
 let cariTimer = null;
 $('#fltCari').addEventListener('input', () => {
   clearTimeout(cariTimer);
@@ -2287,8 +2429,12 @@ $('#fltCari').addEventListener('input', () => {
 $('#btnMore').addEventListener('click', () => muatData(true));
 
 document.addEventListener('click', e => {
+  const vw = e.target.closest('[data-view]');
+  if (vw) { state.view = vw.dataset.view; try { localStorage.setItem('pengajuan_view', state.view); } catch (er) {} renderView(); renderGrid(); return; }
+  const gr = e.target.closest('[data-grup]');
+  if (gr) { state.grup = gr.dataset.grup; state.expandedOpd = {}; renderGrupBar(); muatData(); return; }
   const tab = e.target.closest('.tab[data-tab]');
-  if (tab) { state.tab = tab.dataset.tab; renderTab(); if (state.tab === 'penyedia') muatPenyedia(); if (state.tab === 'akun') muatAkun(); return; }
+  if (tab) { state.tab = tab.dataset.tab; renderTab(); if (state.tab === 'penyedia') muatPenyedia(); if (state.tab === 'akun') muatAkun(); if (state.tab === 'pokja') renderPokja(); return; }
   const chip = e.target.closest('.chip[data-filter]');
   if (chip) { state.filter = chip.dataset.filter; renderChips(); muatData(); return; }
   const trp = e.target.closest('tr[data-pen]');
@@ -2296,6 +2442,7 @@ document.addEventListener('click', e => {
   
   const b = e.target.closest('button[data-act]'); if (!b) return;
   const id = b.dataset.id, act = b.dataset.act;
+  if (act === 'pokja-semua') { document.querySelectorAll('#listPokja .opd-group-card').forEach(c => { state.expandedOpd[c.id] = b.dataset.buka === '1'; }); return renderPokja(); }
   if (act === 'akun') return ubahAkun(b.dataset.user, b.dataset.status, b);
   if (act === 'baru') return bukaForm();
   if (act === 'tabpen') { state.tab = 'penyedia'; renderTab(); muatPenyedia(); return; }
@@ -2919,7 +3066,7 @@ async function isiPilihanPokja(terpilih) {
   if (!state.akun) { try { await muatAkun(); } catch (e) {} }
   const daftar = (state.akun || []).filter(a => a.role === 'Pokja' && a.status === 'Aktif');
   $('#aksiPokja').innerHTML = '<option value="">- Pilih Pokja -</option>' + daftar.map(a =>
-    '<option value="' + esc(a.username) + '"' + (a.username === terpilih ? ' selected' : '') + '>' + esc(a.username) + (a.satker ? ' - ' + esc(a.satker) : '') + '</option>').join('');
+    '<option value="' + esc(a.username) + '"' + (a.username === terpilih ? ' selected' : '') + '>' + esc(a.username) + (a.satker ? ' - ' + esc(a.satker) : '') + ' | ' + ((state.deleg[a.username] || []).length) + ' paket didelegasikan</option>').join('');
   $('#aksiPokjaNote').textContent = daftar.length
     ? 'Paket ini akan muncul di daftar verifikasi dokumen milik Pokja yang dipilih.'
     : 'Belum ada akun Pokja aktif. Buat akun Pokja di tab Kelola Pengguna terlebih dahulu.';
