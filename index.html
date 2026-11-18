@@ -148,6 +148,42 @@
     .link-btn:hover { text-decoration: underline; }
     /* Lebar penuh: tidak mengumpul di tengah pada layar besar / zoom out */
     .container-xl { max-width: none !important; padding-left: clamp(1.25rem, 4vw, 4.5rem) !important; padding-right: clamp(1.25rem, 4vw, 4.5rem) !important; }
+    .lv .lv-dok { margin-top: 0; flex-direction: column; align-items: flex-start; }
+    /* ---------- Sidebar OPD ---------- */
+    .side { position: fixed; top: 0; left: 0; bottom: 0; width: 248px; z-index: 60; display: none; flex-direction: column; background: var(--card); border-right: 1px solid var(--line); padding: 1rem .85rem; overflow-y: auto; }
+    .side .logo { margin: .2rem .4rem 1.1rem; }
+    .side-sec { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: .9rem .6rem .35rem; }
+    .side-link { display: flex; align-items: center; gap: .65rem; width: 100%; padding: .6rem .75rem; border: 0; border-radius: 10px; background: none; color: var(--text); font-size: .88rem; font-weight: 600; text-align: left; text-decoration: none; }
+    .side-link i { font-size: 1.05rem; color: var(--muted); width: 1.2rem; text-align: center; }
+    .side-link:hover { background: var(--hover); }
+    .side-link.on { background: rgba(245,158,11,.14); color: var(--accent-text); }
+    .side-link.on i { color: var(--accent-text); }
+    .side-foot { margin-top: auto; padding: .8rem .6rem 0; font-size: .72rem; color: var(--faint); border-top: 1px solid var(--line); }
+    .side-backdrop { display: none; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.45); }
+    .btn-side { display: none; width: 38px; height: 38px; padding: 0; place-items: center; border-radius: 10px; }
+    #appView.with-side .side { display: flex; }
+    #appView.with-side { padding-left: 248px; }
+    #appView.with-side .nav-top .logo { display: none; }
+    #appView.with-side .nav-in { justify-content: flex-end; }
+    @media (max-width: 991.98px) {
+      #appView.with-side { padding-left: 0; }
+      #appView.with-side .side { transform: translateX(-100%); transition: transform .2s ease; box-shadow: 0 16px 40px var(--shadow); }
+      #appView.with-side.side-open .side { transform: none; }
+      #appView.with-side.side-open .side-backdrop { display: block; }
+      #appView.with-side .btn-side { display: inline-grid; margin-right: .5rem; }
+      #appView.with-side .nav-top .logo { display: flex; }
+      #appView.with-side .nav-in { justify-content: space-between; }
+    }
+    /* ---------- Panduan & Pengaturan ---------- */
+    .guide-step { display: flex; gap: .85rem; padding: .85rem 0; border-bottom: 1px solid var(--line); }
+    .guide-step:last-child { border-bottom: 0; }
+    .guide-no { flex: 0 0 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(245,158,11,.16); color: var(--accent-text); font-weight: 800; font-size: .85rem; }
+    .guide-step h6 { font-weight: 700; margin: 0 0 .2rem; font-size: .92rem; }
+    .guide-step p, .guide-step ul { margin: 0; font-size: .84rem; color: var(--muted); line-height: 1.5; }
+    .guide-step ul { padding-left: 1.1rem; }
+    .set-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 0; border-bottom: 1px solid var(--line); }
+    .set-row:last-child { border-bottom: 0; }
+    .set-row .t { font-weight: 700; font-size: .9rem; } .set-row .d { font-size: .78rem; color: var(--muted); }
     .lv-link { font-size: .72rem; font-weight: 600; color: var(--accent-text); text-decoration: none; }
     .lv-link:hover { text-decoration: underline; }
     .ganti-form { margin-top: 1.2rem; text-align: center; font-size: .86rem; color: var(--muted); }
@@ -494,13 +530,21 @@
 
       <div class="ganti-form mt-4">Ingat password Anda? <button type="button" class="link-btn" id="btnLupaKeMasuk">Kembali ke Masuk</button></div>
     </form>
+    <button type="button" class="btn btn-line w-100 mt-3" data-panduan="1"><i class="bi bi-book me-1"></i> Panduan Penggunaan</button>
   </div>
 </div>
 
 <!-- =============================== APLIKASI =============================== -->
 <div id="appView" style="display:none">
+  <aside class="side" id="sideOpd" aria-label="Menu OPD">
+    <div class="logo"><i class="bi bi-collection-play-fill"></i><span>Pengajuan <em>Alih Daya</em></span></div>
+    <div id="sideNav"></div>
+    <div class="side-foot" id="sideFoot"></div>
+  </aside>
+  <div class="side-backdrop" id="sideBackdrop"></div>
   <nav class="nav-top">
     <div class="container-xl nav-in">
+      <button type="button" class="btn btn-line btn-side" id="btnSide" aria-label="Buka menu"><i class="bi bi-list"></i></button>
       <div class="logo"><i class="bi bi-collection-play-fill"></i><span>Pengajuan <em>Alih Daya</em></span></div>
       <div class="userbox">
         <div class="dropdown" id="notifWrap">
@@ -927,6 +971,81 @@
           <button type="button" class="btn btn-main btn-sm" id="btnAksiPrintModalBawah"><i class="bi bi-printer-fill me-1"></i> Cetak Dokumen</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalPanduan" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-book me-2 text-warning"></i><span id="panduanJudul">Panduan Penggunaan (OPD)</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+       <div data-guide="OPD">
+        <div class="guide-step"><div class="guide-no">1</div><div><h6>Daftar akun OPD</h6><ul>
+          <li>Di halaman masuk, klik <b>Daftar akun OPD</b>.</li>
+          <li>Pilih nama satker, isi email aktif, username, dan password (minimal 8 karakter).</li>
+          <li>Tunggu akun diaktifkan, lalu masuk dengan username dan password tersebut.</li></ul></div></div>
+        <div class="guide-step"><div class="guide-no">2</div><div><h6>Ajukan paket baru</h6><ul>
+          <li>Klik <b>Ajukan paket baru</b> (di beranda atau sidebar).</li>
+          <li>Isi nama paket, calon penyedia (ketik untuk mencari), link katalog penyedia, nilai HPS, pagu anggaran, jenis tenaga alih daya, dan jumlah tenaga. Kode RUP bersifat opsional.</li></ul></div></div>
+        <div class="guide-step"><div class="guide-no">3</div><div><h6>Lengkapi dokumen KAK dan HPS</h6><ul>
+          <li>Kedua dokumen wajib. Unggah berkas (maksimal 10 MB per berkas) atau isi tautan dokumen.</li>
+          <li>Berkas yang sudah ada tampil sebagai tombol KAK dan HPS di daftar pengajuan; klik untuk mengunduh.</li>
+          <li>Untuk mengganti berkas, klik <b>Ganti berkas</b> atau <b>Lengkapi berkas</b>.</li></ul></div></div>
+        <div class="guide-step"><div class="guide-no">4</div><div><h6>Cetak Kertas Kerja</h6><p>Klik <b>Cetak</b> pada pengajuan untuk membuka Kertas Kerja resmi hasil formulir, lalu cetak atau simpan sebagai PDF.</p></div></div>
+        <div class="guide-step"><div class="guide-no">5</div><div><h6>Pantau status pengajuan</h6><ul>
+          <li><b>Menunggu Verifikasi Tahap 1</b>: calon penyedia sedang diperiksa.</li>
+          <li><b>Undangan Klarifikasi</b>: Anda diundang untuk klarifikasi; cek notifikasi dan tombol <b>Klarifikasi</b>.</li>
+          <li><b>Penyedia Ditolak</b>: klik <b>Ganti Penyedia</b> dan pilih penyedia lain.</li>
+          <li><b>Menunggu Verifikasi Tahap 2</b>: dokumen sedang diperiksa Pokja.</li>
+          <li><b>Revisi Dokumen</b>: klik <b>Perbaiki</b> atau <b>Ganti berkas</b>, lalu kirim ulang.</li>
+          <li><b>Disetujui</b> atau <b>Ditolak</b>: hasil akhir pengajuan.</li></ul></div></div>
+        <div class="guide-step"><div class="guide-no">6</div><div><h6>Klarifikasi dan notifikasi</h6><p>Gunakan tombol <b>Klarifikasi</b> untuk berkomunikasi dengan verifikator. Perkembangan pengajuan muncul di ikon lonceng pada bagian atas.</p></div></div>
+        <div class="guide-step"><div class="guide-no">7</div><div><h6>Lupa password</h6><p>Di halaman masuk, klik <b>Lupa password?</b>, masukkan email terdaftar, lalu isi kode verifikasi 6 digit dan password baru.</p></div></div>
+       </div>
+       <div data-guide="Admin" style="display:none">
+        <div class="guide-step"><div class="guide-no">1</div><div><h6>Pengajuan per OPD</h6><p>Pengajuan dikelompokkan per OPD. Gunakan pilihan Konsolidasi atau Non Konsolidasi, kolom pencarian, dan filter status untuk menyaring daftar.</p></div></div>
+        <div class="guide-step"><div class="guide-no">2</div><div><h6>Verifikasi Tahap 1</h6><ul>
+          <li>Periksa calon penyedia beserta akumulasinya.</li>
+          <li><b>Lolos Tahap 1</b> meneruskan paket ke Pokja, <b>Tolak Penyedia</b> meminta OPD mengganti penyedia, dan <b>Undang</b> mengirim undangan klarifikasi.</li></ul></div></div>
+        <div class="guide-step"><div class="guide-no">3</div><div><h6>Akumulasi Penyedia</h6><p>Buka menu Akumulasi Penyedia untuk melihat total pengajuan per penyedia (UMKK dan Non UMKK).</p></div></div>
+        <div class="guide-step"><div class="guide-no">4</div><div><h6>Delegasi ke Pokja</h6><p>Pada paket Tahap 2, klik <b>Delegasikan</b> atau <b>Ganti Pokja</b>. Menu List Pokja menampilkan paket yang dipegang tiap Pokja.</p></div></div>
+        <div class="guide-step"><div class="guide-no">5</div><div><h6>Kelola Pengguna</h6><p>Aktifkan atau ubah status akun yang mendaftar. Jumlah akun yang menunggu ditampilkan di menu.</p></div></div>
+        <div class="guide-step"><div class="guide-no">6</div><div><h6>Kertas Kerja dan klarifikasi</h6><p>Gunakan <b>Kertas Kerja</b> untuk melihat atau mencetak hasil formulir, dan tombol percakapan untuk klarifikasi dengan OPD.</p></div></div>
+       </div>
+       <div data-guide="Pokja" style="display:none">
+        <div class="guide-step"><div class="guide-no">1</div><div><h6>Paket yang didelegasikan</h6><p>Menu Verifikasi Dokumen menampilkan paket yang sudah lolos Tahap 1 dan didelegasikan kepada Anda.</p></div></div>
+        <div class="guide-step"><div class="guide-no">2</div><div><h6>Periksa dokumen</h6><p>Unduh dan periksa KAK serta HPS dari kolom Dokumen, dan buka <b>Kertas Kerja</b> untuk melihat hasil formulir.</p></div></div>
+        <div class="guide-step"><div class="guide-no">3</div><div><h6>Putuskan hasil verifikasi</h6><ul>
+          <li><b>Setujui Final</b> aktif setelah KAK dan HPS lengkap.</li>
+          <li><b>Minta Revisi</b> mengembalikan paket ke OPD untuk diperbaiki.</li>
+          <li><b>Tolak</b> menghentikan pengajuan.</li></ul></div></div>
+        <div class="guide-step"><div class="guide-no">4</div><div><h6>Klarifikasi</h6><p>Gunakan tombol percakapan untuk berkomunikasi dengan OPD terkait paket.</p></div></div>
+       </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-main btn-sm" data-bs-dismiss="modal">Mengerti</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalPengaturan" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-gear me-2 text-warning"></i>Pengaturan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+        <div class="set-row"><div><div class="t">Tema</div><div class="d">Pilih tampilan terang atau gelap.</div></div>
+          <div class="seg" id="setTema"><button type="button" data-set-tema="light">Terang</button><button type="button" data-set-tema="dark">Gelap</button></div></div>
+        <div class="set-row"><div><div class="t">Tampilan daftar</div><div class="d">Bentuk awal daftar pengajuan.</div></div>
+          <div class="seg" id="setView"><button type="button" data-set-view="grid">Grid</button><button type="button" data-set-view="list">List</button></div></div>
+        <div class="set-row"><div><div class="t">Akun</div><div class="d" id="setAkun"></div></div></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-line btn-sm" data-bs-dismiss="modal">Tutup</button></div>
     </div>
   </div>
 </div>
@@ -1965,6 +2084,13 @@ function mulaiSesi(s) {
     : '<button class="btn btn-main btn-lg px-4" data-act="refresh"><i class="bi bi-arrow-clockwise me-1"></i> Muat Ulang Data</button>';
 
   $('#fltCari').value = '';
+  $('#appView').classList.add('with-side');
+  state.sideAktif = 'home';
+  $('#appView').classList.remove('side-open');
+  $('#sideFoot').textContent = opd ? (s.satker || s.username) : (s.username + (s.satker ? ', ' + s.satker : ''));
+  const gj = opd ? 'OPD' : admin ? 'Admin' : 'Pokja';
+  document.querySelectorAll('[data-guide]').forEach(d => { d.style.display = d.dataset.guide === gj ? '' : 'none'; });
+  $('#panduanJudul').textContent = 'Panduan Penggunaan (' + (opd ? 'OPD' : admin ? s.role : 'Pokja') + ')';
   tampil('appView');
   ['cariPen', 'cariAkun', 'cariPokja'].forEach(i => { $('#' + i).value = ''; });
   resetForm(); tutupForm();
@@ -2036,14 +2162,14 @@ function badgeStatus(st) {
   return '<span class="pill ' + cls + '"><i></i>' + esc(st) + '</span>';
 }
 
-function dokChips(p) {
+function dokChips(p, tanpaCetak) {
   const berkas = Object.keys(JENIS_DOK).map(k => p.Dok[k]
     ? '<button type="button" class="dchip ok" data-act="unduh" data-id="' + esc(p.ID_Pengajuan) + '" data-jenis="' + k + '" title="Unduh berkas ' + DOK_PENDEK[k] + '"><i class="bi bi-file-earmark-arrow-down"></i> ' + DOK_PENDEK[k] + '</button>'
     : '<span class="dchip no"><i class="bi bi-exclamation-circle"></i> ' + DOK_PENDEK[k] + ' belum ada</span>').join('');
 
   const cetak = '<button type="button" class="dchip print-chip" data-act="cetak-kertas" data-id="' + esc(p.ID_Pengajuan) + '" title="Cetak Kertas Kerja Hasil Formulir"><i class="bi bi-printer-fill text-warning"></i> Kertas Kerja (Cetak)</button>';
 
-  return berkas + cetak;
+  return tanpaCetak ? berkas : berkas + cetak;
 }
 
 const urlAman = u => /^https?:\/\/\S{4,}$/i.test(String(u || '').trim());
@@ -2167,7 +2293,7 @@ function kelasBaris(st) {
 }
 function tabelList(list) {
   if (!list.length) return '<div class="empty"><i class="bi bi-inbox"></i>' + (state.filter || state.cari ? 'Tidak ada pengajuan yang cocok.' : 'Belum ada pengajuan dari OPD Anda.') + '</div>';
-  return '<div class="table-responsive"><table class="tbl lv"><thead><tr><th>No</th><th>Paket</th><th>Penyedia</th><th style="text-align:right">HPS</th><th>Status</th><th style="text-align:right">Aksi</th></tr></thead><tbody>' +
+  return '<div class="table-responsive"><table class="tbl lv"><thead><tr><th>No</th><th>Paket</th><th>Penyedia</th><th>Dokumen</th><th style="text-align:right">HPS</th><th>Status</th><th style="text-align:right">Aksi</th></tr></thead><tbody>' +
     list.map((p, i) => '<tr class="' + kelasBaris(p.Status) + '">' +
       '<td>' + (i + 1) + '</td>' +
       '<td style="min-width:260px"><div class="lv-nama">' + esc(p.Nama_Paket) + '</div>' +
@@ -2177,6 +2303,7 @@ function tabelList(list) {
         (urlAman(p.Link_Katalog) ? '<div class="lv-sub"><a class="lv-link" href="' + esc(String(p.Link_Katalog).trim()) + '" target="_blank" rel="noopener noreferrer" title="Buka link katalog"><i class="bi bi-box-arrow-up-right"></i> Link katalog</a></div>' : '') +
         bannerUndangan(p) + catatanBox(p) + '</td>' +
       '<td>' + esc(p.Calon_Penyedia) + (isNonUmkk(p.Calon_Penyedia) ? '<span class="badge bg-primary-subtle text-primary ms-1">Non UMKK</span>' : '<span class="badge bg-warning-subtle text-warning ms-1">UMKK</span>') + '</td>' +
+      '<td><div class="dchips lv-dok">' + dokChips(p, true) + '</div></td>' +
       '<td class="num">' + rp(p.Nilai_HPS) + '</td>' +
       '<td>' + badgeStatus(p.Status) + '</td>' +
       '<td><div class="lv-acts">' + aksiKartu(p) + '</div></td>' +
@@ -2312,7 +2439,29 @@ document.addEventListener('click', e => {
   state.expandedOpd[opdId] = !nowShow;
 });
 
+
+function renderSide() {
+  const nav = $('#sideNav'); if (!nav || !state.role) return;
+  const admin = isAdmin(state.role), opd = isOpd(state.role);
+  const menunggu = state.akun ? state.akun.filter(a => a.status === 'Menunggu').length : 0;
+  const L = (key, ikon, teks, on, extra) => '<button type="button" class="side-link' + (on ? ' on' : '') + '" data-side="' + key + '"' + (extra || '') + '><i class="bi ' + ikon + '"></i> ' + teks + '</button>';
+  let h = '<div class="side-sec">Menu</div>';
+  if (opd) {
+    h += L('home', 'bi-grid-1x2-fill', 'Pengajuan Saya', state.sideAktif === 'home') + L('baru', 'bi-plus-circle', 'Ajukan Paket Baru', state.sideAktif === 'baru', ' data-act="baru"');
+  } else if (admin) {
+    h += L('tab:pengajuan', 'bi-grid-1x2-fill', 'Pengajuan per OPD', state.tab === 'pengajuan') +
+         L('tab:penyedia', 'bi-bar-chart-steps', 'Akumulasi Penyedia', state.tab === 'penyedia') +
+         L('tab:pokja', 'bi-people', 'List Pokja', state.tab === 'pokja') +
+         L('tab:akun', 'bi-person-gear', 'Kelola Pengguna' + (menunggu ? ' (' + menunggu + ')' : ''), state.tab === 'akun');
+  } else {
+    h += L('tab:pengajuan', 'bi-clipboard-check', 'Verifikasi Dokumen', true);
+  }
+  h += '<div class="side-sec">Bantuan</div>' + L('panduan', 'bi-book', 'Panduan Penggunaan', false) +
+       '<div class="side-sec">Akun</div>' + L('pengaturan', 'bi-gear', 'Pengaturan', false);
+  nav.innerHTML = h;
+}
 function renderTab() {
+  renderSide();
   const admin = isAdmin(state.role);
   const pokja = isPokja(state.role);
   const tabs = $('#tabs');
@@ -2505,6 +2654,52 @@ $('#fltCari').addEventListener('input', () => {
   cariTimer = setTimeout(() => { state.cari = $('#fltCari').value.trim(); muatData(); }, 350);
 });
 $('#btnMore').addEventListener('click', () => muatData(true));
+
+
+/* ---------- Sidebar OPD, Panduan, Pengaturan ---------- */
+function modalBuka(id) { bootstrap.Modal.getOrCreateInstance($(id)).show(); }
+function tutupSide() { $('#appView').classList.remove('side-open'); }
+function segAktif(sel, attr, val) { document.querySelectorAll(sel + ' button').forEach(b => b.classList.toggle('on', b.getAttribute(attr) === val)); }
+function bukaPengaturan() {
+  segAktif('#setTema', 'data-set-tema', document.documentElement.getAttribute('data-bs-theme') === 'light' ? 'light' : 'dark');
+  segAktif('#setView', 'data-set-view', state.view);
+  $('#setAkun').textContent = (state.satker ? state.satker + ' | ' : '') + (state.username || '') + (state.email ? ' | ' + state.email : '');
+  modalBuka('#modalPengaturan');
+}
+$('#btnSide').addEventListener('click', () => $('#appView').classList.toggle('side-open'));
+$('#sideBackdrop').addEventListener('click', tutupSide);
+document.addEventListener('click', e => {
+  const pd = e.target.closest('[data-panduan]');
+  if (pd) {
+    if (!state.role || $('#loginView').style.display !== 'none') {
+      document.querySelectorAll('[data-guide]').forEach(d => { d.style.display = d.dataset.guide === 'OPD' ? '' : 'none'; });
+      $('#panduanJudul').textContent = 'Panduan Penggunaan (OPD)';
+    }
+    return modalBuka('#modalPanduan');
+  }
+  const sd = e.target.closest('[data-side]');
+  if (sd) {
+    const k = sd.dataset.side;
+    if (k === 'panduan') modalBuka('#modalPanduan');
+    else if (k === 'pengaturan') bukaPengaturan();
+    else if (k.indexOf('tab:') === 0) {
+      const tb = document.querySelector('#tabs .tab[data-tab="' + k.slice(4) + '"]');
+      if (tb) tb.click(); else window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    else if (k === 'home') { tutupForm(); state.sideAktif = 'home'; renderSide(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (k === 'baru') { state.sideAktif = 'baru'; renderSide(); }
+    tutupSide();
+  }
+  const st = e.target.closest('[data-set-tema]');
+  if (st) { setTema(st.dataset.setTema); segAktif('#setTema', 'data-set-tema', st.dataset.setTema); return; }
+  const sv = e.target.closest('[data-set-view]');
+  if (sv) {
+    state.view = sv.dataset.setView;
+    try { localStorage.setItem('pengajuan_view', state.view); } catch (er) {}
+    segAktif('#setView', 'data-set-view', state.view);
+    renderView(); renderGrid();
+  }
+});
 
 document.addEventListener('click', e => {
   const vw = e.target.closest('[data-view]');
