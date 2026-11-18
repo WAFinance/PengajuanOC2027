@@ -1899,6 +1899,8 @@ function isiReferensi() {
 function updateBadgePenyedia(nama, elBadge) {
   if (!elBadge) return;
   if (!nama) { elBadge.style.display = 'none'; return; }
+  // Di formulir pengajuan, label kategori & batas Rp 15 Miliar HANYA untuk Admin/Tim Konsolidasi (disembunyikan dari OPD)
+  if (elBadge.id === 'badgeKategoriPenyedia' && !isAdmin(state.role)) { elBadge.innerHTML = ''; elBadge.style.display = 'none'; return; }
   const nonUmkk = isNonUmkk(nama);
   elBadge.style.display = 'inline-block';
   if (nonUmkk) {
