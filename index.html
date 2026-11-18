@@ -146,6 +146,10 @@
     .login-card { margin-top: 1.5rem; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 2rem; box-shadow: 0 10px 30px var(--shadow); }
     .link-btn { background: none; border: 0; padding: 0; color: var(--accent-text); font-weight: 700; font-size: .86rem; }
     .link-btn:hover { text-decoration: underline; }
+    /* Lebar penuh: tidak mengumpul di tengah pada layar besar / zoom out */
+    .container-xl { max-width: none !important; padding-left: clamp(1rem, 2.5vw, 3rem); padding-right: clamp(1rem, 2.5vw, 3rem); }
+    .lv-link { font-size: .72rem; font-weight: 600; color: var(--accent-text); text-decoration: none; }
+    .lv-link:hover { text-decoration: underline; }
     .ganti-form { margin-top: 1.2rem; text-align: center; font-size: .86rem; color: var(--muted); }
 
     /* ---------- Navigasi ---------- */
@@ -2170,6 +2174,7 @@ function tabelList(list) {
         '<div class="lv-sub">' + esc(p.ID_Pengajuan) + ', ' + esc(p.Timestamp) + '</div>' +
         '<div class="lv-sub">' + esc(p.Jenis_Tenaga_Alih_Daya) + ', ' + p.Jumlah_Tenaga + ' orang' + badgeGrup(p.Konsolidasi) + '</div>' +
         (!isOpd(state.role) && p.PokjaDitugaskan ? '<div class="lv-sub">Pokja: <b>' + esc(p.PokjaDitugaskan) + '</b></div>' : '') +
+        (urlAman(p.Link_Katalog) ? '<div class="lv-sub"><a class="lv-link" href="' + esc(String(p.Link_Katalog).trim()) + '" target="_blank" rel="noopener noreferrer" title="Buka link katalog"><i class="bi bi-box-arrow-up-right"></i> Link katalog</a></div>' : '') +
         bannerUndangan(p) + catatanBox(p) + '</td>' +
       '<td>' + esc(p.Calon_Penyedia) + (isNonUmkk(p.Calon_Penyedia) ? '<span class="badge bg-primary-subtle text-primary ms-1">Non UMKK</span>' : '<span class="badge bg-warning-subtle text-warning ms-1">UMKK</span>') + '</td>' +
       '<td class="num">' + rp(p.Nilai_HPS) + '</td>' +
