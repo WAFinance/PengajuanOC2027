@@ -3144,7 +3144,7 @@ async function isiPilihanPokja(terpilih) {
   if (!state.akun) { try { await muatAkun(); } catch (e) {} }
   const daftar = (state.akun || []).filter(a => a.role === 'Pokja' && a.status === 'Aktif');
   $('#aksiPokja').innerHTML = '<option value="">- Pilih Pokja -</option>' + daftar.map(a =>
-    '<option value="' + esc(a.username) + '"' + (a.username === terpilih ? ' selected' : '') + '>' + esc(a.username) + (a.satker ? ' - ' + esc(a.satker) : '') + ' | ' + ((state.deleg[a.username] || []).length) + ' paket didelegasikan</option>').join('');
+    '<option value="' + esc(a.username) + '"' + (a.username === terpilih ? ' selected' : '') + '>' + esc(a.username) + ' | ' + ((state.deleg[a.username] || []).length) + ' paket didelegasikan</option>').join('');
   $('#aksiPokjaNote').textContent = daftar.length
     ? 'Paket ini akan muncul di daftar verifikasi dokumen milik Pokja yang dipilih.'
     : 'Belum ada akun Pokja aktif. Buat akun Pokja di tab Kelola Pengguna terlebih dahulu.';
