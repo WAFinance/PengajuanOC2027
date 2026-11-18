@@ -6,6 +6,9 @@
  * Alur unduh   : browser -> GET /file?id=...  (Worker cek login, ambil dari Drive, teruskan)
  * Alur bersih  : browser -> DELETE /file?id=... (hanya pemilik unggahan, untuk membatalkan pengajuan gagal)
  *
+ * Keamanan: unggah hanya untuk akun OPD berstatus Aktif; unduh hanya bila pengguna berhak membaca
+ *            pengajuan terkait (diputuskan Firestore Rules); batas laju unggah per pengguna.
+ *
  * Secret  : GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN
  * Variabel: FIREBASE_PROJECT_ID, ALLOWED_ORIGINS (pisahkan dengan koma),
  *           DRIVE_FOLDER_ID (opsional; kalau kosong, folder dicari/dibuat otomatis)
@@ -97,8 +100,41 @@ async function verifyFirebaseToken(request, env) {
     'RSASSA-PKCS1-v1_5', key, b64uToBytes(parts[2]),
     new TextEncoder().encode(parts[0] + '.' + parts[1]));
   if (!valid) throw new HttpError(401, 'Tanda tangan token tidak valid.');
-  return payload; // payload.sub = uid Firebase
+  return Object.assign({}, payload, { jwt }); // sub = uid Firebase; jwt = token asli (dipakai memanggil Firestore atas nama pengguna)
 }
+
+/* ------------------- Firestore (atas nama pengguna) & pembatas laju ------------------- */
+// Pemanggilan memakai ID token pengguna, jadi Firestore Rules yang menentukan boleh/tidaknya.
+function fsGet(env, token, path, mask) {
+  const url = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(env.FIREBASE_PROJECT_ID) +
+    '/databases/(default)/documents/' + path +
+    (mask ? '?' + mask.map(m => 'mask.fieldPaths=' + encodeURIComponent(m)).join('&') : '');
+  return fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+}
+
+// Pastikan akun terdaftar dan berstatus Aktif; mengembalikan peran dan username dari Firestore
+async function profilAktif(env, user) {
+  const r = await fsGet(env, user.jwt, 'users/' + encodeURIComponent(user.sub), ['status', 'role', 'username']);
+  if (!r.ok) throw new HttpError(403, 'Profil akun tidak dapat diverifikasi.');
+  const j = await r.json().catch(() => ({}));
+  const f = j.fields || {};
+  const v = k => (f[k] && f[k].stringValue) || '';
+  if (v('status') !== 'Aktif') throw new HttpError(403, 'Akun belum aktif.');
+  return { role: v('role'), username: v('username') };
+}
+
+// Pembatas sederhana per isolate (cukup untuk meredam penyalahgunaan ringan)
+const lajuMap = new Map();
+function batasiLaju(kunci, maks, jendelaMs) {
+  const now = Date.now();
+  const arr = (lajuMap.get(kunci) || []).filter(t => now - t < jendelaMs);
+  if (arr.length >= maks) throw new HttpError(429, 'Terlalu banyak permintaan. Coba lagi beberapa menit lagi.');
+  arr.push(now);
+  lajuMap.set(kunci, arr);
+  if (lajuMap.size > 5000) lajuMap.clear();
+}
+
+const POLA_ID_PENGAJUAN = /^PGJ-(?:[A-Z0-9]{1,30}-)?\d{8}-\d{1,6}$/;
 
 /* ------------------------------ Google Drive ------------------------------ */
 async function driveToken(env) {
@@ -163,9 +199,13 @@ async function buatSesi(request, env, user, c) {
 
   if (ALLOWED_EXT.indexOf(ext) < 0) throw new HttpError(400, 'Format harus PDF, DOC, DOCX, XLS, atau XLSX.');
   if (!(size > 0) || size > MAX_BYTES) throw new HttpError(400, 'Ukuran berkas harus 1 byte sampai 10 MB.');
-  if (!/^PGJ-(?:[A-Z0-9]{1,30}-)?\d{8}-\d{1,6}$/.test(id)) throw new HttpError(400, 'ID pengajuan tidak valid.');
+  if (!POLA_ID_PENGAJUAN.test(id)) throw new HttpError(400, 'ID pengajuan tidak valid.');
   if (!/^[a-z]{2,12}$/.test(jenis)) throw new HttpError(400, 'Jenis dokumen tidak valid.');
   const mime = /^[\w.+-]+\/[\w.+-]+$/.test(String(b.mime || '')) ? b.mime : 'application/octet-stream';
+
+  const prof = await profilAktif(env, user);
+  if (prof.role !== 'OPD') throw new HttpError(403, 'Hanya akun OPD yang dapat mengunggah dokumen.');
+  batasiLaju('unggah:' + user.sub, 30, 10 * 60 * 1000);
 
   const at = await driveToken(env);
   const parent = await rootFolder(env, at);
@@ -196,22 +236,40 @@ async function buatSesi(request, env, user, c) {
   return json({ ok: true, uploadUrl: loc }, 200, c.headers);
 }
 
-async function ambilBerkas(env, id, c) {
+async function ambilBerkas(env, id, user, c) {
+  await profilAktif(env, user);
   const at = await driveToken(env);
-  const r = await fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?alt=media', {
-    headers: { Authorization: 'Bearer ' + at }
-  });
+  const auth = { Authorization: 'Bearer ' + at };
+
+  const m = await fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?fields=appProperties,trashed', { headers: auth });
+  if (!m.ok) throw new HttpError(404, 'Berkas tidak ditemukan di Drive.');
+  const meta = await m.json().catch(() => ({}));
+  if (meta.trashed) throw new HttpError(404, 'Berkas tidak ditemukan di Drive.');
+  const ap = meta.appProperties || {};
+
+  // Boleh dibuka jika: pengunggah sendiri, ATAU pengguna berhak membaca dokumen pengajuan terkait
+  // (hak baca ditentukan oleh Firestore Rules, bukan oleh Worker).
+  let boleh = !!ap.uid && ap.uid === user.sub;
+  if (!boleh && POLA_ID_PENGAJUAN.test(String(ap.pengajuanId || ''))) {
+    const r = await fsGet(env, user.jwt, 'pengajuan/' + encodeURIComponent(ap.pengajuanId), ['status']);
+    boleh = r.ok;
+  }
+  if (!boleh) throw new HttpError(403, 'Anda tidak berhak membuka berkas ini.');
+
+  const r = await fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?alt=media', { headers: auth });
   if (!r.ok) throw new HttpError(r.status === 404 ? 404 : 502, 'Berkas tidak ditemukan di Drive.');
   return new Response(r.body, {
     status: 200,
     headers: Object.assign({
       'Content-Type': r.headers.get('Content-Type') || 'application/octet-stream',
-      'Cache-Control': 'private, no-store'
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff'
     }, c.headers)
   });
 }
 
 async function hapusBerkas(env, id, user, c) {
+  await profilAktif(env, user);
   const at = await driveToken(env);
   const auth = { Authorization: 'Bearer ' + at };
   const url = 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id);
@@ -236,21 +294,17 @@ async function hapusBerkas(env, id, user, c) {
 export default {
   async fetch(request, env) {
     const c = corsInfo(request, env);
-    // Pemeriksaan konfigurasi (tanpa login, hanya menampilkan ada/tidaknya nilai, bukan isinya)
+    // Pemeriksaan hidup. Rincian konfigurasi hanya tampil bila variabel DEBUG_HEALTH = "1" (matikan setelah selesai diagnosis).
     if (request.method === 'GET' && new URL(request.url).pathname === '/health') {
+      if (env.DEBUG_HEALTH !== '1') return json({ ok: true }, 200, c.headers);
       return json({
         ok: true,
         ALLOWED_ORIGINS_terisi: (env.ALLOWED_ORIGINS || '').split(',').filter(s => s.trim()).length,
         FIREBASE_PROJECT_ID: !!env.FIREBASE_PROJECT_ID,
         GOOGLE_CLIENT_ID: !!String(env.GOOGLE_CLIENT_ID || '').trim(),
         GOOGLE_CLIENT_SECRET: !!String(env.GOOGLE_CLIENT_SECRET || '').trim(),
-        GOOGLE_REFRESH_TOKEN: !!String(env.GOOGLE_REFRESH_TOKEN || '').trim(),
-        // Cek bentuk nilai (bukan isinya): ID berakhiran .apps.googleusercontent.com,
-        // secret berawalan GOCSPX-, refresh token berawalan 1//
-        bentuk_CLIENT_ID_wajar: /\.apps\.googleusercontent\.com$/.test(String(env.GOOGLE_CLIENT_ID || '').trim()),
-        bentuk_CLIENT_SECRET_wajar: /^GOCSPX-/.test(String(env.GOOGLE_CLIENT_SECRET || '').trim()),
-        bentuk_REFRESH_TOKEN_wajar: /^1\/\//.test(String(env.GOOGLE_REFRESH_TOKEN || '').trim())
-      });
+        GOOGLE_REFRESH_TOKEN: !!String(env.GOOGLE_REFRESH_TOKEN || '').trim()
+      }, 200, c.headers);
     }
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: c.ok ? 204 : 403, headers: c.headers });
@@ -266,7 +320,7 @@ export default {
       if (url.pathname === '/file') {
         const id = url.searchParams.get('id') || '';
         if (!/^[A-Za-z0-9_-]{10,100}$/.test(id)) throw new HttpError(400, 'ID berkas tidak valid.');
-        if (request.method === 'GET') return await ambilBerkas(env, id, c);
+        if (request.method === 'GET') return await ambilBerkas(env, id, user, c);
         if (request.method === 'DELETE') return await hapusBerkas(env, id, user, c);
       }
       throw new HttpError(404, 'Tidak ditemukan.');
