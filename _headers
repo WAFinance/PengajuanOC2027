@@ -1,0 +1,10 @@
+# Header keamanan untuk Cloudflare Pages (letakkan di folder yang sama dengan index.html)
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  # Mode laporan dulu: tidak memblokir apa pun, hanya mencatat pelanggaran di Console browser.
+  # Setelah dicoba tanpa peringatan, ubah nama header menjadi Content-Security-Policy agar diberlakukan.
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://pengajuanoc2027.wafinance.workers.dev https://*.googleapis.com; frame-src https://pengajuanoc2027-ff269.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'

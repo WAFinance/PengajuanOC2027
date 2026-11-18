@@ -16,8 +16,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous">
   <!-- Firebase SDK (compat — no bundler needed) -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -412,7 +412,7 @@
       </div>
       <div class="fld mb-4">
         <label for="regPass">Password</label>
-        <input class="form-control" id="regPass" type="password" required minlength="6" maxlength="100" autocomplete="new-password" placeholder="Minimal 6 karakter">
+        <input class="form-control" id="regPass" type="password" required minlength="8" maxlength="100" autocomplete="new-password" placeholder="Minimal 8 karakter">
       </div>
       <button class="btn btn-main w-100 py-2" id="btnDaftar" type="submit">Daftar Akun</button>
       <div class="ganti-form">Sudah punya akun? <button type="button" class="link-btn" id="btnKeMasuk">Masuk</button></div>
@@ -501,7 +501,7 @@
             </div>
             <div class="fld">
               <label for="fLink">Link katalog penyedia</label>
-              <input class="form-control" id="fLink" type="url" required maxlength="500" placeholder="https://e-katalog.lkpp.go.id/..."><div class="link-prev" id="linkPrev"></div>
+              <input class="form-control" id="fLink" type="url" required maxlength="500" pattern="https?://.+" placeholder="https://e-katalog.lkpp.go.id/..."><div class="link-prev" id="linkPrev"></div>
             </div>
             <div class="fld">
               <label for="fHps">Nilai HPS</label>
@@ -715,7 +715,7 @@
         </div>
         <div class="fld mb-2">
           <label for="baPass">Password</label>
-          <input class="form-control" id="baPass" type="password" required minlength="6" placeholder="Minimal 6 karakter">
+          <input class="form-control" id="baPass" type="password" required minlength="8" placeholder="Minimal 8 karakter">
         </div>
       </div>
       <div class="modal-footer">
@@ -855,7 +855,7 @@
 
 <div class="toast-container position-fixed top-0 end-0 p-3" id="toasts" style="z-index:2000"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script>
 /* =====================================================================
  *  KONFIGURASI FIREBASE & KONSTANTA
@@ -871,6 +871,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbAuth = firebase.auth();
 const fbDb  = firebase.firestore();
+// Sesi login hanya berlaku selama tab terbuka (tidak disimpan permanen di perangkat)
+const authSiap = fbAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(e => console.warn('Persistence:', e));
 /* Penyimpanan berkas: Google Drive lewat Cloudflare Worker (lihat folder drive-worker/).
  * Isi DRIVE_WORKER_URL dengan alamat Worker setelah deploy. Firestore hanya menyimpan metadata. */
 const DRIVE_WORKER_URL = 'https://pengajuanoc2027.wafinance.workers.dev';
@@ -973,10 +975,10 @@ async function buatIdPengajuan() {
   const n = new Date(), p2 = x => String(x).padStart(2, '0');
   const tgl = n.getFullYear() + p2(n.getMonth() + 1) + p2(n.getDate()); // tanggal lokal perangkat
   const awalan = 'PGJ-' + kodeOpdId(state.satker) + '-' + tgl + '-';
-  const fid = firebase.firestore.FieldPath.documentId();
-  const snap = await fbDb.collection('pengajuan').where(fid, '>=', awalan).where(fid, '<', awalan + '\uf8ff').get();
+  // Hanya membaca pengajuan milik OPD sendiri (sesuai aturan keamanan), lalu mencari nomor urut tertinggi
+  const snap = await fbDb.collection('pengajuan').where('opd_pengaju', '==', state.satker).get();
   let maks = 0;
-  snap.docs.forEach(x => { const k = parseInt(x.id.substring(awalan.length), 10); if (k > maks) maks = k; });
+  snap.docs.forEach(x => { if (x.id.indexOf(awalan) !== 0) return; const k = parseInt(x.id.substring(awalan.length), 10); if (k > maks) maks = k; });
   return awalan + (maks + 1);
 }
 
@@ -1080,65 +1082,70 @@ function tsToStr(ts) {
   try { return ts.toDate().toLocaleString('id-ID'); } catch (e) { return new Date(ts).toLocaleString('id-ID'); }
 }
 
+// Profil resmi dari Firestore (sumber kebenaran peran/satker/status), bukan dari penyimpanan di browser
+async function ambilProfil(user) {
+  let data = null;
+  const doc = await fbDb.collection('users').doc(user.uid).get();
+  if (doc.exists) data = doc.data();
+  else if (user.email) {
+    const snap = await fbDb.collection('users').where('email', '==', user.email.toLowerCase()).limit(1).get();
+    if (!snap.empty) data = snap.docs[0].data();
+  }
+  if (!data) return null;
+  return { username: data.username, role: data.role, satker: data.satker || '', email: data.email, status: data.status };
+}
+const msUrut = ts => (ts && ts.toMillis ? ts.toMillis() : Number.MAX_SAFE_INTEGER); // timestamp belum terisi = paling baru
+
 const api = async (fn, ...args) => {
   switch (fn) {
 
     /* ---- LOGIN ---- */
     case 'login': {
       const [input, password] = args;
-      let email = input.trim();
+      const salah = { ok: false, message: 'Username/email atau password salah.' }; // satu pesan untuk semua kegagalan
+      let email = String(input || '').trim();
+      if (!email || !password) return salah;
+      await authSiap;
 
-      // Jika bukan format email, cari email dari username di Firestore
-      if (!email.includes('@')) {
-        const snap = await fbDb.collection('users')
-          .where('username_lower', '==', email.toLowerCase()).limit(1).get();
-        if (snap.empty) return { ok: false, message: 'Username atau email tidak ditemukan.' };
-        email = snap.docs[0].data().email;
+      // Username -> email lewat dokumen login_lookup (dibaca per-ID; koleksi users tidak terbuka untuk umum)
+      if (email.indexOf('@') < 0) {
+        let dok;
+        try { dok = await fbDb.collection('login_lookup').doc(email.toLowerCase()).get(); } catch (e) { return salah; }
+        if (!dok.exists || !dok.data().email) return salah;
+        email = dok.data().email;
       }
 
       let cred;
       try {
         cred = await fbAuth.signInWithEmailAndPassword(email, password);
       } catch (e) {
-        const msg = (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential')
-          ? 'Password salah.' : (e.code === 'auth/user-not-found') ? 'Akun tidak ditemukan.' : 'Login gagal: ' + e.message;
-        return { ok: false, message: msg };
+        if (e.code === 'auth/too-many-requests') return { ok: false, message: 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.' };
+        if (e.code === 'auth/network-request-failed') return { ok: false, message: 'Tidak dapat terhubung. Periksa koneksi internet.' };
+        return salah;
       }
 
-      // Ambil profil dari Firestore
-      const uid = cred.user.uid;
-      let userData = null;
-      const userDoc = await fbDb.collection('users').doc(uid).get();
-      if (userDoc.exists) {
-        userData = userDoc.data();
-      } else {
-        // Fallback: cari by email
-        const snap2 = await fbDb.collection('users').where('email', '==', email.toLowerCase()).limit(1).get();
-        if (!snap2.empty) userData = snap2.docs[0].data();
-      }
-
-      if (!userData) { await fbAuth.signOut(); return { ok: false, message: 'Profil akun tidak ditemukan.' }; }
-      if (userData.status !== 'Aktif') {
+      let prof = null;
+      try { prof = await ambilProfil(cred.user); } catch (e) { console.error(e); }
+      if (!prof) { await fbAuth.signOut(); return { ok: false, message: 'Profil akun tidak ditemukan.' }; }
+      if (prof.status !== 'Aktif') {
         await fbAuth.signOut();
-        return { ok: false, message: userData.status === 'Menunggu' ? 'Akun Anda menunggu persetujuan Admin.' : 'Akun Anda tidak aktif. Hubungi Admin.' };
+        return { ok: false, message: prof.status === 'Menunggu' ? 'Akun Anda menunggu persetujuan Admin.' : 'Akun Anda tidak aktif. Hubungi Admin.' };
       }
-
-      return { ok: true, username: userData.username, role: userData.role, satker: userData.satker || '', email: userData.email };
+      return { ok: true, username: prof.username, role: prof.role, satker: prof.satker, email: prof.email };
     }
 
     /* ---- LUPA PASSWORD — Firebase kirim email reset ---- */
     case 'mintaResetPassword': {
       const [email] = args;
-      const em = email.trim().toLowerCase();
-      // Verifikasi email terdaftar di sistem
-      const snap = await fbDb.collection('users').where('email', '==', em).limit(1).get();
-      if (snap.empty) return { ok: false, message: 'Email tidak ditemukan dalam sistem.' };
+      const em = String(email || '').trim().toLowerCase();
       try {
         await fbAuth.sendPasswordResetEmail(em);
       } catch (e) {
-        return { ok: false, message: 'Gagal mengirim email: ' + e.message };
+        if (e.code === 'auth/invalid-email') return { ok: false, message: 'Format email tidak valid.' };
+        console.warn('Reset password:', e.code);
       }
-      return { ok: true, message: 'Link reset password telah dikirim ke ' + em + '. Silakan cek inbox atau folder Spam, lalu klik link di email tersebut.' };
+      // Pesan sama untuk email terdaftar maupun tidak (mencegah penelusuran email)
+      return { ok: true, message: 'Jika email ' + em + ' terdaftar, link reset password telah dikirim. Silakan cek inbox atau folder Spam, lalu klik link di email tersebut.' };
     }
 
     case 'prosesResetPassword': {
@@ -1166,18 +1173,15 @@ const api = async (fn, ...args) => {
     /* ---- DAFTAR AKUN (OPD mendaftar sendiri) ---- */
     case 'daftarAkun': {
       const [satker, username, password, email] = args;
-      const uLow = username.trim().toLowerCase();
+      const uTrim = String(username || '').trim(), uLow = uTrim.toLowerCase();
       const eLow = email ? email.trim().toLowerCase() : '';
+      if (!/^[A-Za-z0-9._\-]{3,30}$/.test(uTrim)) return { ok: false, message: 'Username 3-30 karakter: huruf, angka, titik, garis bawah, atau strip.' };
+      if (String(password || '').length < 8) return { ok: false, message: 'Password minimal 8 karakter.' };
+      await authSiap;
 
-      // Cek username unik
-      const snapU = await fbDb.collection('users').where('username_lower', '==', uLow).limit(1).get();
-      if (!snapU.empty) return { ok: false, message: 'Username sudah dipakai. Pilih username lain.' };
-
-      // Cek email unik
-      if (eLow) {
-        const snapE = await fbDb.collection('users').where('email', '==', eLow).limit(1).get();
-        if (!snapE.empty) return { ok: false, message: 'Email sudah terdaftar.' };
-      }
+      // Cek username unik lewat login_lookup (dibaca per-ID)
+      const ada = await fbDb.collection('login_lookup').doc(uLow).get();
+      if (ada.exists) return { ok: false, message: 'Username sudah dipakai. Pilih username lain.' };
 
       let cred;
       try {
@@ -1185,18 +1189,28 @@ const api = async (fn, ...args) => {
       } catch (e) {
         if (e.code === 'auth/email-already-in-use') return { ok: false, message: 'Email sudah digunakan.' };
         if (e.code === 'auth/invalid-email') return { ok: false, message: 'Format email tidak valid.' };
+        if (e.code === 'auth/weak-password') return { ok: false, message: 'Password terlalu lemah.' };
         throw e;
       }
 
-      await fbDb.collection('users').doc(cred.user.uid).set({
-        username      : username.trim(),
-        username_lower: uLow,
-        email         : eLow || (uLow + '@sistem.pengajuan.local'),
-        satker        : satker,
-        role          : 'OPD',
-        status        : 'Menunggu',
-        created_at    : firebase.firestore.FieldValue.serverTimestamp()
-      });
+      const emailAkun = eLow || (uLow + '@sistem.pengajuan.local');
+      try {
+        // Pemesanan username (gagal bila username sudah diambil orang lain pada saat yang sama)
+        await fbDb.collection('login_lookup').doc(uLow).set({ email: emailAkun, username_lower: uLow });
+        await fbDb.collection('users').doc(cred.user.uid).set({
+          username      : uTrim,
+          username_lower: uLow,
+          email         : emailAkun,
+          satker        : satker,
+          role          : 'OPD',
+          status        : 'Menunggu',
+          created_at    : firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (e) {
+        try { await cred.user.delete(); } catch (e2) {}
+        await fbAuth.signOut().catch(() => {});
+        return { ok: false, message: 'Pendaftaran gagal. Username mungkin sudah dipakai, coba username lain.' };
+      }
 
       // Sign out — akun menunggu persetujuan admin
       await fbAuth.signOut();
@@ -1238,6 +1252,7 @@ const api = async (fn, ...args) => {
         status        : 'Aktif',
         created_at    : firebase.firestore.FieldValue.serverTimestamp()
       });
+      await fbDb.collection('login_lookup').doc(uLow).set({ email: eLow, username_lower: uLow });
 
       return { ok: true, message: 'Akun ' + role + ' (' + username + ') berhasil dibuat.' };
     }
@@ -1279,14 +1294,16 @@ const api = async (fn, ...args) => {
     case 'getPengajuan': {
       const [opsi] = args;
 
-      // Ambil semua pengajuan sekaligus (client-side filter — hindari composite index)
-      const snap = await fbDb.collection('pengajuan').orderBy('created_at', 'desc').get();
+      // Query dibatasi di server sesuai peran (OPD: milik sendiri; Pokja: yang didelegasikan; Admin: semua).
+      // Urutan dilakukan di sisi klien untuk OPD/Pokja agar tidak butuh composite index.
+      let q = fbDb.collection('pengajuan');
+      if (isOpd(state.role)) q = q.where('opd_pengaju', '==', state.satker);
+      else if (isPokja(state.role)) q = q.where('pokja_ditugaskan', '==', state.username);
+      else if (isAdmin(state.role)) q = q.orderBy('created_at', 'desc');
+      else throw new Error('Peran tidak dikenali.');
+      const snap = await q.get();
       let all = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-
-      // Filter role OPD
-      if (isOpd(state.role)) all = all.filter(p => p.opd_pengaju === state.satker);
-      // Pokja hanya melihat paket yang didelegasikan kepadanya oleh Admin
-      if (isPokja(state.role)) all = all.filter(p => p.pokja_ditugaskan === state.username);
+      if (!isAdmin(state.role)) all.sort((a, b) => msUrut(b.created_at) - msUrut(a.created_at));
 
       // Hitung ringkasan dari SEMUA data (sebelum filter status/cari)
       const j = { Pending: 0, Revisi: 0, Disetujui: 0, Ditolak: 0 };
@@ -1593,6 +1610,7 @@ const api = async (fn, ...args) => {
     }
     case 'tautanDokumen': {
       const [id, jenis, tautan] = args;
+      if (!urlAman(tautan)) throw new Error('Tautan harus diawali http:// atau https://.');
       await fbDb.collection('pengajuan').doc(id).update({ [kolomDok(jenis)]: 'link:' + tautan + '|Tautan Dokumen' });
       return { ok: true, nama: 'Tautan Dokumen' };
     }
@@ -1604,11 +1622,17 @@ const api = async (fn, ...args) => {
       const raw  = snap.data()[col];
       if (!raw) return { ok: false, message: 'Dokumen belum ada.' };
       const link = raw.split('|')[0];
-      if (link.startsWith('link:')) { window.open(link.substring(5), '_blank'); return { ok: true }; }
+      // Hanya tautan http(s) yang boleh dibuka (mencegah javascript:/data: dari input pengguna)
+      const bukaLuar = u => {
+        if (!urlAman(u)) return { ok: false, message: 'Tautan dokumen tidak valid (harus http/https).' };
+        window.open(u, '_blank', 'noopener,noreferrer');
+        return { ok: true };
+      };
       if (link.startsWith('gdrive:')) { await bukaDariDrive(link.substring(7), raw.split('|')[1] || ''); return { ok: true }; }
-      if (link.startsWith('drive:')) { window.open(link.substring(6), '_blank'); return { ok: true }; }
-      if (link.startsWith('storage:')) { window.open(link.substring(8), '_blank'); return { ok: true }; }
-      if (link.startsWith('http://') || link.startsWith('https://')) { window.open(link, '_blank'); return { ok: true }; }
+      if (link.startsWith('link:')) return bukaLuar(link.substring(5));
+      if (link.startsWith('drive:')) return bukaLuar(link.substring(6));
+      if (link.startsWith('storage:')) return bukaLuar(link.substring(8));
+      if (/^https?:\/\//i.test(link)) return bukaLuar(link);
       return { ok: false, message: 'Format dokumen tidak dikenali.' };
     }
 
@@ -1628,6 +1652,9 @@ function tampil(id) {
 
 function keluar(pesan) {
   store.removeItem(SESSION_KEY);
+  store.removeItem('lookup_sinkron');
+  try { fbAuth.signOut(); } catch (e) {}
+  if (state.klarSub) { try { state.klarSub(); } catch (e) {} state.klarSub = null; }
   Object.assign(state, { username: null, role: null, email: null, ringkasan: null, list: [], total: 0, penyedia: null, akun: null, satker: '', editingId: null, filter: '', cari: '' });
   document.querySelectorAll('.modal.show').forEach(m => bootstrap.Modal.getOrCreateInstance(m).hide());
   tampil('loginView');
@@ -2130,7 +2157,23 @@ function renderTab() {
 }
 
 async function muatAkun() {
-  try { state.akun = (await call('getAkun')).akun; renderAkun(); renderTab(); } catch (e) { gagal(e); }
+  try { state.akun = (await call('getAkun')).akun; renderAkun(); renderTab(); sinkronLookup(); } catch (e) { gagal(e); }
+}
+// Admin: pastikan setiap akun punya entri login_lookup (username -> email) agar login dengan username berfungsi
+async function sinkronLookup() {
+  if (!isAdmin(state.role) || !state.akun || store.getItem('lookup_sinkron') === '1') return;
+  try {
+    const daftar = state.akun.filter(a => a.username && a.email);
+    for (let i = 0; i < daftar.length; i += 400) {
+      const b = fbDb.batch();
+      daftar.slice(i, i + 400).forEach(a => {
+        const u = String(a.username).trim().toLowerCase();
+        b.set(fbDb.collection('login_lookup').doc(u), { email: String(a.email).trim().toLowerCase(), username_lower: u });
+      });
+      await b.commit();
+    }
+    store.setItem('lookup_sinkron', '1');
+  } catch (e) { console.warn('Sinkron login_lookup gagal:', e); }
 }
 function renderAkun() {
   const rows = state.akun || [];
@@ -2180,9 +2223,9 @@ $('#btnSimpanAkunBaru').addEventListener('click', async () => {
   const pass = $('#baPass').value;
   const box = $('#baMsg');
 
-  if (!satker || !user || !pass || pass.length < 6) {
+  if (!satker || !user || !pass || pass.length < 8) {
     box.className = 'alert py-2 small alert-danger';
-    box.textContent = 'Lengkapi semua field (password minimal 6 karakter).';
+    box.textContent = 'Lengkapi semua field (password minimal 8 karakter).';
     box.style.display = '';
     return;
   }
@@ -2361,7 +2404,7 @@ function renderKertasKerjaHtml(d) {
   const jenis = (d.Jenis_Tenaga_Alih_Daya || '').trim();
   const jenisAda = jenis && jenis.charAt(0) !== '(';
   const penyediaAda = d.Calon_Penyedia && String(d.Calon_Penyedia).charAt(0) !== '(';
-  const linkHtml = linkKatalog
+  const linkHtml = urlAman(linkKatalog)
     ? '<a href="' + esc(linkKatalog) + '" target="_blank" style="color:#0d6efd;text-decoration:underline;word-break:break-all;">' + esc(linkKatalog) + '</a>'
     : '';
 
@@ -2610,7 +2653,7 @@ function pickerHtml(k, pre, sekarang) {
     '</div>' +
     '<div class="fpc-link">' +
       '<i class="bi bi-link-45deg"></i>' +
-      '<input type="url" class="fp-link" placeholder="atau tempel tautan Google Drive">' +
+      '<input type="url" class="fp-link" maxlength="500" pattern="https?://.+" placeholder="atau tempel tautan Google Drive">' +
     '</div>' +
   '</div>';
 }
@@ -2646,6 +2689,7 @@ function sumberDok(wadah) {
 
 async function simpanDokumen(id, sumber, btn) {
   const daftar = Object.keys(JENIS_DOK).filter(k => sumber[k]);
+  for (const k of daftar) if (sumber[k].link && !urlAman(sumber[k].link)) throw new Error('Tautan ' + DOK_PENDEK[k] + ' harus diawali http:// atau https://.');
   for (let i = 0; i < daftar.length; i++) {
     const k = daftar[i], s = sumber[k];
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan dokumen ' + (i + 1) + '/' + daftar.length;
@@ -2656,7 +2700,8 @@ async function simpanDokumen(id, sumber, btn) {
 
 async function unduh(id, jenis) {
   try {
-    await call('unduhDokumen', id, jenis);
+    const r = await call('unduhDokumen', id, jenis);
+    if (r && !r.ok) toast(r.message || 'Dokumen tidak dapat dibuka.', 'warning');
   } catch (err) { gagal(err); }
 }
 
@@ -2758,6 +2803,10 @@ $('#formPengajuan').addEventListener('submit', e => { e.preventDefault(); kirimF
 async function kirimForm(konfirmasi) {
   const baru = !state.editingId;
   const sumber = baru ? sumberDok($('#fileSection')) : {};
+  if (!urlAman($('#fLink').value)) { toast('Link katalog harus diawali http:// atau https://.', 'warning'); $('#fLink').focus(); return; }
+  for (const k of Object.keys(sumber)) {
+    if (sumber[k].link && !urlAman(sumber[k].link)) { toast('Tautan ' + DOK_PENDEK[k] + ' harus diawali http:// atau https://.', 'warning'); return; }
+  }
   if (baru) {
     const kurang = Object.keys(JENIS_DOK).filter(k => !sumber[k]);
     if (kurang.length) { toast('Lengkapi dokumen: ' + kurang.map(k => JENIS_DOK[k]).join(', ') + '.', 'warning'); return; }
@@ -3018,12 +3067,19 @@ $('#chatInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.s
 
 (async function init() {
   muatReferensi();
-  const raw = store.getItem(SESSION_KEY);
-  if (!raw) return tampil('loginView');
   try {
-    const s = JSON.parse(raw);
-    mulaiSesi(s);
-  } catch (e) { keluar(); }
+    await authSiap;
+    if (typeof fbAuth.authStateReady === 'function') await fbAuth.authStateReady();
+    else await new Promise(r => { const off = fbAuth.onAuthStateChanged(() => { off(); r(); }); });
+  } catch (e) {}
+  const u = fbAuth.currentUser;
+  if (!u) { store.removeItem(SESSION_KEY); return tampil('loginView'); }
+  try {
+    // Peran/satker/status diambil ulang dari server; data di sessionStorage tidak dipercaya
+    const prof = await ambilProfil(u);
+    if (!prof || prof.status !== 'Aktif') { await fbAuth.signOut(); store.removeItem(SESSION_KEY); return tampil('loginView'); }
+    mulaiSesi(prof);
+  } catch (e) { console.error(e); keluar(); }
 })();
 </script>
 </body>
