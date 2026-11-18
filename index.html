@@ -352,6 +352,34 @@
     .lv .lv-acts { display: flex; flex-wrap: wrap; gap: .3rem; justify-content: flex-end; }
     .lv .undangan-banner, .lv .cat-box { max-width: 460px; }
 
+    /* Warna baris List View (tipis): revisi = merah, disetujui = biru, pengajuan awal = kuning */
+    .lv tbody tr.row-revisi td { background: rgba(248,113,113,.10); }
+    .lv tbody tr.row-revisi td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+    .lv tbody tr.row-disetujui td { background: rgba(56,189,248,.10); }
+    .lv tbody tr.row-disetujui td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
+    .lv tbody tr.row-awal td { background: rgba(245,158,11,.08); }
+    .lv tbody tr.row-awal td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+    /* ---------- Notifikasi ---------- */
+    .notif-btn { position: relative; width: 38px; height: 38px; padding: 0; display: inline-grid; place-items: center; border-radius: 50%; }
+    .notif-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--red); color: #fff; font-size: .68rem; font-weight: 800; display: grid; place-items: center; line-height: 1; }
+    .notif-menu { width: 380px; max-width: 92vw; padding: 0; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px var(--shadow); overflow: hidden; text-align: left; }
+    .notif-head { display: flex; justify-content: space-between; align-items: center; padding: .8rem 1rem; border-bottom: 1px solid var(--line); font-weight: 800; }
+    .notif-list { max-height: 60vh; overflow-y: auto; }
+    .notif-item { display: flex; gap: .7rem; padding: .75rem 1rem; border-bottom: 1px solid var(--line); cursor: pointer; }
+    .notif-item:last-child { border-bottom: 0; }
+    .notif-item:hover { background: var(--hover); }
+    .notif-item.baru { background: rgba(245,158,11,.07); }
+    .notif-item:not(.baru) .notif-txt { opacity: .65; }
+    .notif-ic { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; }
+    .notif-ic.danger { background: rgba(248,113,113,.15); color: var(--red); } .notif-ic.success { background: rgba(52,211,153,.15); color: var(--green); }
+    .notif-ic.info { background: rgba(56,189,248,.15); color: var(--blue); } .notif-ic.warning { background: rgba(245,158,11,.15); color: var(--accent-text); }
+    .notif-txt { min-width: 0; flex: 1; font-size: .82rem; word-break: break-word; }
+    .notif-txt b { display: block; font-size: .84rem; }
+    .notif-meta { font-size: .72rem; color: var(--faint); margin-top: .2rem; }
+    .notif-meta .link-btn { font-size: .72rem; }
+    .notif-detail { color: var(--muted); margin-top: .15rem; }
+
     /* ---------- Tombol tema ---------- */
     .btn-tema { width: 38px; height: 38px; padding: 0; display: inline-grid; place-items: center; border-radius: 50%; }
     [data-bs-theme="dark"] .ic-moon, [data-bs-theme="light"] .ic-sun { display: none; }
@@ -471,6 +499,13 @@
     <div class="container-xl nav-in">
       <div class="logo"><i class="bi bi-collection-play-fill"></i><span>Pengajuan <em>Alih Daya</em></span></div>
       <div class="userbox">
+        <div class="dropdown" id="notifWrap">
+          <button type="button" class="btn btn-line notif-btn" id="btnNotif" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifikasi"><i class="bi bi-bell-fill"></i><span class="notif-badge" id="notifBadge" style="display:none">0</span></button>
+          <div class="dropdown-menu dropdown-menu-end notif-menu">
+            <div class="notif-head"><span>Notifikasi</span><button type="button" class="link-btn" id="btnNotifSemua">Tandai semua dibaca</button></div>
+            <div class="notif-list" id="notifList"></div>
+          </div>
+        </div>
         <button type="button" class="btn btn-line btn-tema" aria-label="Ganti tema"><i class="bi bi-sun-fill ic-sun"></i><i class="bi bi-moon-stars-fill ic-moon"></i></button>
         <div>
           <div class="nm" id="whoName"></div>
@@ -1147,6 +1182,11 @@ async function ambilProfil(user) {
   if (!data) return null;
   return { username: data.username, role: data.role, satker: data.satker || '', email: data.email, status: data.status };
 }
+// Kelompok status untuk chip filter: Pending (menunggu), Revisi, Disetujui, Ditolak
+const kelompokStatus = st => (st === 'Menunggu Verifikasi Tahap 1' || st === 'Undangan Klarifikasi' || st === 'Menunggu Verifikasi Tahap 2') ? 'Pending'
+  : (st === 'Revisi Dokumen') ? 'Revisi'
+  : (st === 'Penyedia Ditolak') ? 'Ditolak'
+  : st;
 const msUrut = ts => (ts && ts.toMillis ? ts.toMillis() : Number.MAX_SAFE_INTEGER); // timestamp belum terisi = paling baru
 
 const api = async (fn, ...args) => {
@@ -1378,17 +1418,14 @@ const api = async (fn, ...args) => {
       const j = { Pending: 0, Revisi: 0, Disetujui: 0, Ditolak: 0 };
       let tot = 0;
       all.forEach(x => {
-        const st = (x.status === 'Menunggu Verifikasi Tahap 1' || x.status === 'Undangan Klarifikasi' || x.status === 'Menunggu Verifikasi Tahap 2') ? 'Pending'
-                 : (x.status === 'Revisi Dokumen') ? 'Revisi'
-                 : (x.status === 'Penyedia Ditolak') ? 'Ditolak'
-                 : x.status;
+        const st = kelompokStatus(x.status);
         if (j[st] !== undefined) j[st]++;
         if (x.status !== 'Ditolak' && x.status !== 'Penyedia Ditolak') tot += Number(x.nilai_hps) || 0;
       });
 
       // Filter tampilan
       let filtered = [...all];
-      if (opsi.status) filtered = filtered.filter(p => p.status === opsi.status);
+      if (opsi.status) filtered = filtered.filter(p => kelompokStatus(p.status) === opsi.status);
       if (opsi.cari) {
         const q = opsi.cari.toLowerCase();
         filtered = filtered.filter(p =>
@@ -1523,6 +1560,7 @@ const api = async (fn, ...args) => {
         tx.set(refBaru, dataBaru);
       });
 
+      await buatNotif(['role:Admin'], { id: newId, nama: d.nama, opd: state.satker, kons: isKonsolidasi(d.jenis) }, 'warning', 'Pengajuan baru menunggu verifikasi Tahap 1');
       return { ok: true, id: newId, message: 'Pengajuan ' + newId + ' berhasil dikirim ke Verifikasi Tahap 1 (Admin).' };
     }
 
@@ -1549,6 +1587,7 @@ const api = async (fn, ...args) => {
         pesan: '[Ganti Penyedia] OPD mengganti penyedia menjadi "' + penyediaBaru + '" (HPS: ' + rp(hpsBaru || lama.nilai_hps) + '). ' + (catatan ? 'Catatan: ' + catatan : '')
       });
 
+      await buatNotif(['role:Admin'], { id, nama: lama.nama_paket, opd: lama.opd_pengaju, kons: isKonsolidasi(lama.jenis_tenaga_alih_daya) }, 'warning', 'OPD mengganti penyedia, menunggu verifikasi Tahap 1', penyediaBaru);
       return { ok: true, message: 'Penyedia berhasil diganti dan diajukan kembali ke Verifikasi Tahap 1.' };
     }
 
@@ -1567,6 +1606,8 @@ const api = async (fn, ...args) => {
         pengirim: state.username, role: state.role, pesan: teks,
         created_at: firebase.firestore.FieldValue.serverTimestamp()
       });
+      const pdu = (await ref.get()).data() || {};
+      await buatNotif(['satker:' + pdu.opd_pengaju], { id, nama: pdu.nama_paket, opd: pdu.opd_pengaju, kons: isKonsolidasi(pdu.jenis_tenaga_alih_daya) }, 'warning', 'Undangan klarifikasi: ' + du.tanggal + ' ' + du.waktu + ' WIB', du.tempat);
       return { ok: true, message: 'Undangan klarifikasi berhasil dikirimkan ke OPD.' };
     }
 
@@ -1579,6 +1620,7 @@ const api = async (fn, ...args) => {
         kode_rup: d.rup || null, pagu_anggaran: d.pagu || null,
         status: 'Menunggu Verifikasi Tahap 1', catatan_umum: '', catatan_item: {}
       });
+      await buatNotif(['role:Admin'], { id, nama: d.nama, opd: state.satker, kons: isKonsolidasi(d.jenis) }, 'warning', 'Revisi dikirim ulang, menunggu verifikasi Tahap 1');
       return { ok: true, message: 'Revisi pengajuan ' + id + ' berhasil dikirim ulang.' };
     }
 
@@ -1587,6 +1629,7 @@ const api = async (fn, ...args) => {
       const [id, statusBaru, catatan, itemsArg, opsi] = args;
       const items = itemsArg || {};
       const ref = fbDb.collection('pengajuan').doc(id);
+      const pd = (await ref.get()).data() || {};
 
       const updateData = {
         status      : statusBaru,
@@ -1612,6 +1655,25 @@ const api = async (fn, ...args) => {
       }
 
       await ref.update(updateData);
+
+      // Notifikasi ke pihak terkait
+      const info = { id, nama: pd.nama_paket, opd: pd.opd_pengaju, kons: isKonsolidasi(pd.jenis_tenaga_alih_daya) };
+      const kOpd = 'satker:' + pd.opd_pengaju;
+      if (statusBaru === 'Menunggu Verifikasi Tahap 2') {
+        await buatNotif([opsi && opsi.pokja ? 'user:' + opsi.pokja : null], info, 'info', 'Paket baru untuk diverifikasi');
+        await buatNotif([kOpd], info, 'info', 'Lolos Tahap 1, menunggu verifikasi Pokja');
+      } else if (statusBaru === 'Penyedia Ditolak') {
+        await buatNotif([kOpd], info, 'danger', 'Penyedia ditolak, silakan ganti penyedia', catatan);
+      } else if (statusBaru === 'Revisi Dokumen') {
+        await buatNotif([kOpd], info, 'danger', 'Perlu revisi dokumen', catatan);
+        await buatNotif(['role:Admin'], info, 'danger', 'Pokja meminta revisi dokumen', catatan);
+      } else if (statusBaru === 'Disetujui') {
+        await buatNotif([kOpd], info, 'success', 'Pengajuan disetujui final');
+        await buatNotif(['role:Admin'], info, 'success', 'Disetujui final oleh Pokja');
+      } else if (statusBaru === 'Ditolak') {
+        await buatNotif([kOpd], info, 'danger', 'Pengajuan ditolak', catatan);
+        await buatNotif(['role:Admin'], info, 'danger', 'Ditolak oleh Pokja', catatan);
+      }
 
       let pesan = '[Status: ' + statusBaru + ']' + (catatan ? ' ' + catatan : '') + infoDelegasi;
       Object.keys(ITEM_TOLAK).forEach(k => { if (items[k]) pesan += '\n- ' + ITEM_TOLAK[k] + ': ' + items[k]; });
@@ -1639,6 +1701,8 @@ const api = async (fn, ...args) => {
         pesan: '[Delegasi Pokja] Verifikasi dokumen pengajuan didelegasikan kepada Pokja: ' + pokja,
         created_at: firebase.firestore.FieldValue.serverTimestamp()
       });
+      const pdl = (await ref.get()).data() || {};
+      await buatNotif(['user:' + pokja], { id, nama: pdl.nama_paket, opd: pdl.opd_pengaju, kons: isKonsolidasi(pdl.jenis_tenaga_alih_daya) }, 'info', 'Paket didelegasikan kepada Anda');
       return { ok: true, message: 'Pengajuan ' + id + ' didelegasikan ke Pokja ' + pokja + '.' };
     }
 
@@ -1721,11 +1785,12 @@ function tampil(id) {
 }
 
 function keluar(pesan) {
+  berhentiNotif();
   store.removeItem(SESSION_KEY);
   store.removeItem('lookup_sinkron');
   try { fbAuth.signOut(); } catch (e) {}
   if (state.klarSub) { try { state.klarSub(); } catch (e) {} state.klarSub = null; }
-  Object.assign(state, { username: null, role: null, email: null, ringkasan: null, list: [], total: 0, penyedia: null, akun: null, satker: '', editingId: null, filter: '', cari: '' });
+  Object.assign(state, { username: null, role: null, email: null, ringkasan: null, list: [], total: 0, penyedia: null, akun: null, satker: '', editingId: null, filter: '', cari: '', notif: [] });
   document.querySelectorAll('.modal.show').forEach(m => bootstrap.Modal.getOrCreateInstance(m).hide());
   tampil('loginView');
   tampilFormMasuk('login');
@@ -1869,7 +1934,7 @@ $('#loginForm').addEventListener('submit', async e => {
 $('#btnLogout').addEventListener('click', () => keluar());
 
 function mulaiSesi(s) {
-  Object.assign(state, { username: s.username, role: s.role, email: s.email, tab: 'pengajuan', filter: '', cari: '', grup: 'konsolidasi', deleg: {}, satker: s.satker || '', akun: null });
+  Object.assign(state, { username: s.username, role: s.role, email: s.email, tab: 'pengajuan', filter: '', cari: '', grup: 'konsolidasi', deleg: {}, notif: [], satker: s.satker || '', akun: null });
   const opd = isOpd(s.role);
   const admin = isAdmin(s.role);
   const pokja = isPokja(s.role);
@@ -1897,7 +1962,7 @@ function mulaiSesi(s) {
   tampil('appView');
   ['cariPen', 'cariAkun', 'cariPokja'].forEach(i => { $('#' + i).value = ''; });
   resetForm(); tutupForm();
-  renderView(); renderGrupBar();
+  renderView(); renderGrupBar(); renderNotif(); mulaiNotif();
   renderTab();
   muatData();
   if (!state.ref) muatReferensi();
@@ -2089,14 +2154,20 @@ function kartu(p) {
 }
 
 // List View ringkas mendatar (gaya tabel SPSE) untuk OPD
+function kelasBaris(st) {
+  return (st === 'Revisi Dokumen' || st === 'Revisi') ? 'row-revisi'
+       : st === 'Disetujui' ? 'row-disetujui'
+       : (st === 'Menunggu Verifikasi Tahap 1' || st === 'Pending' || st === 'Undangan Klarifikasi') ? 'row-awal' : '';
+}
 function tabelList(list) {
   if (!list.length) return '<div class="empty"><i class="bi bi-inbox"></i>' + (state.filter || state.cari ? 'Tidak ada pengajuan yang cocok.' : 'Belum ada pengajuan dari OPD Anda.') + '</div>';
   return '<div class="table-responsive"><table class="tbl lv"><thead><tr><th>No</th><th>Paket</th><th>Penyedia</th><th style="text-align:right">HPS</th><th>Status</th><th style="text-align:right">Aksi</th></tr></thead><tbody>' +
-    list.map((p, i) => '<tr>' +
+    list.map((p, i) => '<tr class="' + kelasBaris(p.Status) + '">' +
       '<td>' + (i + 1) + '</td>' +
       '<td style="min-width:260px"><div class="lv-nama">' + esc(p.Nama_Paket) + '</div>' +
         '<div class="lv-sub">' + esc(p.ID_Pengajuan) + ', ' + esc(p.Timestamp) + '</div>' +
         '<div class="lv-sub">' + esc(p.Jenis_Tenaga_Alih_Daya) + ', ' + p.Jumlah_Tenaga + ' orang' + badgeGrup(p.Konsolidasi) + '</div>' +
+        (!isOpd(state.role) && p.PokjaDitugaskan ? '<div class="lv-sub">Pokja: <b>' + esc(p.PokjaDitugaskan) + '</b></div>' : '') +
         bannerUndangan(p) + catatanBox(p) + '</td>' +
       '<td>' + esc(p.Calon_Penyedia) + (isNonUmkk(p.Calon_Penyedia) ? '<span class="badge bg-primary-subtle text-primary ms-1">Non UMKK</span>' : '<span class="badge bg-warning-subtle text-warning ms-1">UMKK</span>') + '</td>' +
       '<td class="num">' + rp(p.Nilai_HPS) + '</td>' +
@@ -2106,7 +2177,7 @@ function tabelList(list) {
 }
 
 function renderView() {
-  $('#viewToggle').style.display = isOpd(state.role) ? '' : 'none';
+  $('#viewToggle').style.display = '';
   document.querySelectorAll('#viewToggle button').forEach(b => b.classList.toggle('on', b.dataset.view === state.view));
 }
 
@@ -2185,7 +2256,7 @@ function renderGrid() {
         else if (it.Status === 'Disetujui') hitung.Selesai++;
       });
 
-      const cardsHtml = gOpd.items.map(kartu).join('');
+      const isi = state.view === 'list' ? tabelList(gOpd.items) : '<div class="grid">' + gOpd.items.map(kartu).join('') + '</div>';
 
       return '<div class="opd-group-card" id="' + safeId + '">' +
         '<div class="opd-header" data-toggle-opd="' + safeId + '">' +
@@ -2205,7 +2276,7 @@ function renderGrid() {
           '</div>' +
         '</div>' +
         '<div class="opd-content" style="display:' + (isExpanded ? '' : 'none') + '">' +
-          '<div class="grid">' + cardsHtml + '</div>' +
+          isi +
         '</div>' +
       '</div>';
     }).join('');
@@ -3204,6 +3275,7 @@ async function kirimChat() {
   const btn = $('#btnChatKirim'); busy(btn, true, 'Kirim');
   try {
     await call('kirimKlarifikasi', id, teks);
+    kabarKlarifikasi(id, teks);
     input.value = '';
     await muatKlarifikasi();
   } catch (e) { gagal(e); }
@@ -3211,6 +3283,113 @@ async function kirimChat() {
 }
 $('#btnChatKirim').addEventListener('click', kirimChat);
 $('#chatInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); kirimChat(); } });
+
+/* =====================================================================
+ *  NOTIFIKASI TERSIMPAN DI SERVER (koleksi Firestore "notifikasi")
+ *  Penerima: 'role:Admin' | 'user:<username Pokja>' | 'satker:<nama OPD>'
+ *  Status baca disimpan per akun di field dibaca_oleh, sehingga ikut ke semua perangkat.
+ * ===================================================================== */
+let notifUnsub = null;
+function berhentiNotif() { if (notifUnsub) { try { notifUnsub(); } catch (e) {} notifUnsub = null; } }
+function kunciNotifSaya() {
+  if (isOpd(state.role)) return state.satker ? 'satker:' + state.satker : null;
+  if (isAdmin(state.role)) return 'role:Admin';
+  if (isPokja(state.role)) return 'user:' + state.username;
+  return null;
+}
+function mulaiNotif() {
+  berhentiNotif();
+  const kunci = kunciNotifSaya(); if (!kunci) return;
+  langgananNotif(kunci, false);
+}
+function langgananNotif(kunci, tanpaIndeks) {
+  let q = fbDb.collection('notifikasi').where('penerima', '==', kunci);
+  if (!tanpaIndeks) q = q.orderBy('created_at', 'desc').limit(80);
+  notifUnsub = q.onSnapshot(snap => {
+    let arr = snap.docs.map(d => {
+      const x = d.data({ serverTimestamps: 'estimate' });
+      return { key: d.id, id: x.id_pengajuan, nama: x.nama_paket || '', opd: x.opd || '', tipe: x.tipe || 'info', judul: x.judul || '', detail: x.detail || '',
+        ms: x.created_at && x.created_at.toMillis ? x.created_at.toMillis() : Date.now(), kons: x.kons !== false, dibaca: (x.dibaca_oleh || []).indexOf(state.username) >= 0 };
+    });
+    if (tanpaIndeks) arr = arr.sort((a, b) => b.ms - a.ms).slice(0, 80);
+    state.notif = arr; renderNotif();
+  }, err => {
+    // Tanpa indeks gabungan, urutkan di sisi klien (berfungsi tanpa pengaturan tambahan)
+    if (err && err.code === 'failed-precondition' && !tanpaIndeks) { berhentiNotif(); langgananNotif(kunci, true); }
+    else console.warn('Notifikasi tidak dapat dimuat:', err && err.code);
+  });
+}
+// Buat notifikasi untuk daftar penerima (kegagalan tidak boleh membatalkan aksi utama)
+async function buatNotif(penerima, info, tipe, judul, detail) {
+  const saya = 'user:' + state.username;
+  const tujuan = Array.from(new Set((penerima || []).filter(k => k && k !== saya && !/:$/.test(k))));
+  if (!tujuan.length) return;
+  try {
+    const b = fbDb.batch();
+    tujuan.forEach(k => b.set(fbDb.collection('notifikasi').doc(), {
+      penerima: k, id_pengajuan: info.id, nama_paket: info.nama || '', opd: info.opd || '', kons: info.kons !== false,
+      tipe, judul, detail: detail || '', oleh: state.username, dibaca_oleh: [state.username],
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    }));
+    await b.commit();
+  } catch (e) { console.warn('Notifikasi gagal dibuat:', e && e.code, e); }
+}
+// Pesan klarifikasi baru: beri tahu pihak lain pada paket tersebut
+async function kabarKlarifikasi(id, teks) {
+  try {
+    const sp = await fbDb.collection('pengajuan').doc(id).get(); if (!sp.exists) return;
+    const pd = sp.data(), pk = pd.pokja_ditugaskan ? 'user:' + pd.pokja_ditugaskan : null;
+    const info = { id, nama: pd.nama_paket, opd: pd.opd_pengaju, kons: isKonsolidasi(pd.jenis_tenaga_alih_daya) };
+    const tujuan = isOpd(state.role) ? ['role:Admin', pk] : isAdmin(state.role) ? ['satker:' + pd.opd_pengaju, pk] : ['satker:' + pd.opd_pengaju, 'role:Admin'];
+    await buatNotif(tujuan, info, 'info', 'Pesan klarifikasi baru dari ' + state.username, teks.length > 100 ? teks.slice(0, 100) + '...' : teks);
+  } catch (e) { console.warn('Notifikasi klarifikasi gagal:', e); }
+}
+async function tandaiBaca(keys) {
+  const target = (state.notif || []).filter(n => keys.indexOf(n.key) >= 0 && !n.dibaca);
+  if (!target.length) return;
+  target.forEach(n => { n.dibaca = true; }); renderNotif();
+  try {
+    for (let i = 0; i < target.length; i += 400) {
+      const b = fbDb.batch();
+      target.slice(i, i + 400).forEach(n => b.update(fbDb.collection('notifikasi').doc(n.key), { dibaca_oleh: firebase.firestore.FieldValue.arrayUnion(state.username) }));
+      await b.commit();
+    }
+  } catch (e) {
+    console.warn('Gagal menyimpan status baca:', e);
+    target.forEach(n => { n.dibaca = false; }); renderNotif();
+    toast('Status baca belum tersimpan di server. Coba lagi.', 'warning');
+  }
+}
+function renderNotif() {
+  const daftar = state.notif || [];
+  const belum = daftar.filter(n => !n.dibaca).length;
+  const bd = $('#notifBadge'); bd.textContent = belum > 9 ? '9+' : belum; bd.style.display = belum ? '' : 'none';
+  $('#btnNotifSemua').style.display = belum ? '' : 'none';
+  const ikon = { danger: 'bi-exclamation-octagon-fill', success: 'bi-check-circle-fill', info: 'bi-info-circle-fill', warning: 'bi-calendar2-event-fill' };
+  $('#notifList').innerHTML = daftar.length ? daftar.map(n => {
+    const baru = !n.dibaca;
+    const waktu = n.ms ? new Date(n.ms).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    return '<div class="notif-item' + (baru ? ' baru' : '') + '" data-nkey="' + esc(n.key) + '"><div class="notif-ic ' + esc(n.tipe) + '"><i class="bi ' + (ikon[n.tipe] || ikon.info) + '"></i></div>' +
+      '<div class="notif-txt"><b>' + esc(n.judul) + '</b>' + esc(n.nama) + (n.opd && !isOpd(state.role) ? ' (' + esc(n.opd) + ')' : '') +
+      (n.detail ? '<div class="notif-detail">' + esc(n.detail) + '</div>' : '') +
+      '<div class="notif-meta">' + esc(waktu) + (baru ? (waktu ? ' &bull; ' : '') + '<button type="button" class="link-btn" data-nread="' + esc(n.key) + '">Tandai dibaca</button>' : '') + '</div></div></div>';
+  }).join('') : '<div class="empty py-4"><i class="bi bi-bell-slash"></i>Belum ada notifikasi.</div>';
+}
+function bukaDariNotif(key) {
+  const n = (state.notif || []).find(x => x.key === key); if (!n || !n.id) return;
+  state.tab = 'pengajuan'; state.filter = ''; state.cari = n.id; $('#fltCari').value = n.id;
+  if (!isOpd(state.role)) state.grup = n.kons ? 'konsolidasi' : 'non';
+  bootstrap.Dropdown.getOrCreateInstance($('#btnNotif')).hide();
+  renderTab(); renderGrupBar(); muatData();
+  $('#paneList').scrollIntoView({ behavior: 'smooth' });
+}
+document.addEventListener('click', e => {
+  const rd = e.target.closest('[data-nread]');
+  if (rd) { tandaiBaca([rd.dataset.nread]); return; }
+  const it = e.target.closest('.notif-item[data-nkey]');
+  if (it) { tandaiBaca([it.dataset.nkey]); bukaDariNotif(it.dataset.nkey); }
+});
+$('#btnNotifSemua').addEventListener('click', () => tandaiBaca((state.notif || []).map(n => n.key)));
 
 (async function init() {
   muatReferensi();
