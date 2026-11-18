@@ -1725,7 +1725,7 @@ function isiReferensi() {
   
   // Searchable Datalist untuk Calon Penyedia
   $('#listPenyedia').innerHTML = r.penyedia.map(p => {
-    const label = p.nama + (p.kategori === 'Non UMKK' ? ' [Non UMKK - Bebas Batas 15M]' : ' [UMKK - Maks 15M]');
+    const label = p.nama + (p.kategori === 'Non UMKK' ? ' [Non UMKK]' : ' [UMKK]');
     return '<option value="' + esc(p.nama) + '">' + esc(label) + '</option>';
   }).join('');
 
