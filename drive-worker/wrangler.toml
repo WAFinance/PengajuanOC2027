@@ -3,6 +3,10 @@ name = "pengajuanoc2027"
 main = "worker.js"
 compatibility_date = "2025-01-01"
 
+# Pertahankan variabel/secret yang diisi lewat dashboard Cloudflare saat deploy dari GitHub.
+# Tanpa baris ini, variabel teks biasa yang tidak tertulis di file ini bisa terhapus pada setiap deploy.
+keep_vars = true
+
 [vars]
 FIREBASE_PROJECT_ID = "pengajuanoc2027-ff269"
 # Alamat tempat aplikasi dibuka, tanpa garis miring di akhir dan tanpa /app.html.
