@@ -302,6 +302,13 @@
     html.acc-on { --accent-text: var(--accent-text-d); }
     html.acc-on[data-bs-theme="light"] { --accent-text: var(--accent-text-l); }
     i.text-warning, b.text-warning { color: var(--accent-text) !important; }
+    /* ---------- Validasi formulir ---------- */
+    .fld-err { display: flex; align-items: center; gap: .35rem; margin-top: .4rem; color: var(--red); font-size: .78rem; font-weight: 700; }
+    .fld-err::before { content: "\F333"; font-family: "bootstrap-icons"; font-weight: 400; }
+    #formPengajuan .is-invalid, #modalGantiPen .is-invalid { border-color: var(--red) !important; background-image: none; }
+    #formPengajuan .is-invalid:focus { box-shadow: 0 0 0 3px rgba(248,113,113,.2); }
+    .fld.sec-err { border-radius: 12px; }
+
     /* ---------- Pengaturan warna ---------- */
     .swatches { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin-top: .55rem; }
     .swatch { width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 2px solid var(--line2); cursor: pointer; transition: transform .12s ease; }
@@ -666,7 +673,7 @@
         <div><h2 class="sec-title" id="formTitle">Formulir pengajuan</h2><p class="small-note mb-0" id="formSub"></p></div>
         <button type="button" class="btn btn-line btn-sm align-self-start" id="btnBatalEdit"><i class="bi bi-x-lg me-1"></i>Tutup</button>
       </div>
-      <form id="formPengajuan" autocomplete="off">
+      <form id="formPengajuan" autocomplete="off" novalidate>
         <div class="row g-4">
           <div class="col-lg-6">
             <div class="fld">
@@ -674,9 +681,9 @@
               <input class="form-control" id="fNama" required maxlength="200" placeholder="Misal: Jasa Kebersihan Gedung Kantor">
             </div>
             <div class="fld">
-              <label for="fPenyedia">Calon penyedia (Ketik untuk mencari)</label>
-              <input class="form-control" id="fPenyedia" list="listPenyedia" placeholder="Ketik nama PT/CV penyedia..." required autocomplete="off">
-              <datalist id="listPenyedia"></datalist>
+              <label for="fPenyedia">Calon penyedia</label>
+              <select class="form-select" id="fPenyedia" required></select>
+              <input class="form-control mt-2" id="fPenyediaLain" maxlength="200" placeholder="Tulis nama penyedia (PT/CV) secara manual" autocomplete="off" style="display:none">
               <div id="badgeKategoriPenyedia" class="mt-1" style="display:none"></div>
               <div class="pen-info" id="penyediaInfo" aria-live="polite"></div>
             </div>
@@ -690,22 +697,22 @@
             </div>
             <div class="fld">
               <label for="fPagu">Pagu Anggaran</label>
-              <div class="rp-wrap"><span class="rp">Rp</span><input class="form-control" id="fPagu" inputmode="numeric" placeholder="0"></div>
+              <div class="rp-wrap"><span class="rp">Rp</span><input class="form-control" id="fPagu" inputmode="numeric" placeholder="0" required></div>
             </div>
           </div>
           <div class="col-lg-6">
             <div class="fld">
-              <label for="fJenis">Jenis tenaga alih daya (Ketik untuk mencari)</label>
-              <input class="form-control" id="fJenis" list="listJenis" placeholder="Ketik jenis tenaga..." required autocomplete="off">
-              <datalist id="listJenis"></datalist>
+              <label for="fJenis">Jenis tenaga alih daya</label>
+              <select class="form-select" id="fJenis" required></select>
+              <input class="form-control mt-2" id="fJenisLain" maxlength="200" placeholder="Tulis jenis tenaga alih daya secara manual" autocomplete="off" style="display:none">
             </div>
             <div class="fld">
               <label for="fJumlah">Jumlah tenaga</label>
               <input class="form-control" id="fJumlah" type="number" min="1" step="1" placeholder="Jumlah personel" required>
             </div>
             <div class="fld">
-              <label for="fRup">Kode RUP <span class="text-muted fw-normal small">(opsional)</span></label>
-              <input class="form-control" id="fRup" placeholder="Contoh: 55512345" maxlength="50">
+              <label for="fRup">Kode RUP</label>
+              <input class="form-control" id="fRup" placeholder="Contoh: 55512345" maxlength="50" required>
             </div>
           </div>
         </div>
@@ -821,8 +828,9 @@
           <div class="text-danger fw-semibold" id="gpPenyediaLama"></div>
         </div>
         <div class="fld">
-          <label for="gpPenyediaBaru">Calon Penyedia Baru (Ketik untuk mencari)</label>
-          <input class="form-control" id="gpPenyediaBaru" list="listPenyedia" placeholder="Ketik nama penyedia baru..." required autocomplete="off">
+          <label for="gpPenyediaBaru">Calon Penyedia Baru</label>
+          <select class="form-select" id="gpPenyediaBaru" required></select>
+          <input class="form-control mt-2" id="gpPenyediaLain" maxlength="200" placeholder="Tulis nama penyedia (PT/CV) secara manual" autocomplete="off" style="display:none">
           <div id="gpBadgeKategori" class="mt-1" style="display:none"></div>
         </div>
         <div class="fld">
@@ -1294,10 +1302,28 @@ const NON_UMKK_LIST = [
 ];
 
 // Produk Konsolidasi = jenis tenaga yang ada di daftar referensi (9 produk). Di luar daftar = Non Konsolidasi.
-function isKonsolidasi(jenis) {
+function cekWajibServer(d) {
+  const kosong = [];
+  if (!String(d.nama || '').trim()) kosong.push('Nama paket');
+  if (!String(d.penyedia || '').trim()) kosong.push('Calon penyedia');
+  if (!String(d.jenis || '').trim()) kosong.push('Jenis tenaga alih daya');
+  if (!(Number(d.nilai) > 0)) kosong.push('Nilai HPS');
+  if (!(Number(d.pagu) > 0)) kosong.push('Pagu Anggaran');
+  if (!(Number(d.jumlah) >= 1)) kosong.push('Jumlah tenaga');
+  if (!String(d.rup || '').trim()) kosong.push('Kode RUP');
+  if (!String(d.link || '').trim()) kosong.push('Link katalog');
+  return kosong.length ? 'Data wajib belum lengkap: ' + kosong.join(', ') + '.' : '';
+}
+function isKonsolidasi(jenis, penyedia) {
+  // Konsolidasi hanya bila JENIS dan PENYEDIA sama-sama dipilih dari daftar.
+  // "Jenis Lainnya" atau "Penyedia Lainnya" (tulis manual) otomatis Non Konsolidasi.
   if (!state.ref || !state.ref.jenis || !state.ref.jenis.length) return true;
-  const n = normNama(jenis);
-  return state.ref.jenis.some(j => normNama(j) === n);
+  const nj = normNama(jenis);
+  const jenisOk = state.ref.jenis.some(j => normNama(j) === nj);
+  const dp = state.ref.penyedia || [];
+  const np = normNama(penyedia);
+  const penyediaOk = !dp.length || dp.some(p => normNama(p.nama) === np);
+  return jenisOk && penyediaOk;
 }
 const STATUS_TAHAP1 = ['Menunggu Verifikasi Tahap 1', 'Pending', 'Undangan Klarifikasi', 'Penyedia Ditolak'];
 function badgeGrup(k) {
@@ -1618,7 +1644,7 @@ const api = async (fn, ...args) => {
 
       // Kelompok Konsolidasi / Non Konsolidasi (berdasarkan jenis tenaga alih daya)
       if (!state.ref) await muatReferensi();
-      const konsOf = p => isKonsolidasi(p.jenis_tenaga_alih_daya);
+      const konsOf = p => isKonsolidasi(p.jenis_tenaga_alih_daya, p.calon_penyedia);
       const grupAll = { konsolidasi: 0, non: 0 };
       all.forEach(p => { grupAll[konsOf(p) ? 'konsolidasi' : 'non']++; });
       // Paket yang sedang didelegasikan per Pokja (untuk Admin)
@@ -1784,6 +1810,7 @@ const api = async (fn, ...args) => {
     /* ---- SUBMIT PENGAJUAN BARU ---- */
     case 'submitPengajuan': {
       const [d] = args;
+      const kurang = cekWajibServer(d); if (kurang) return { ok: false, message: kurang };
       const newId = d.id || await buatIdPengajuan();
       const dk = d.dokumen || {};
 
@@ -1809,7 +1836,7 @@ const api = async (fn, ...args) => {
         tx.set(refBaru, dataBaru);
       });
 
-      await buatNotif(['role:Admin'], { id: newId, nama: d.nama, opd: state.satker, kons: isKonsolidasi(d.jenis) }, 'warning', 'Pengajuan baru menunggu verifikasi Tahap 1');
+      await buatNotif(['role:Admin'], { id: newId, nama: d.nama, opd: state.satker, kons: isKonsolidasi(d.jenis, d.penyedia) }, 'warning', 'Pengajuan baru menunggu verifikasi Tahap 1');
       return { ok: true, id: newId, message: 'Pengajuan ' + newId + ' berhasil dikirim ke Verifikasi Tahap 1 (Admin).' };
     }
 
@@ -1836,7 +1863,7 @@ const api = async (fn, ...args) => {
         pesan: '[Ganti Penyedia] OPD mengganti penyedia menjadi "' + penyediaBaru + '" (HPS: ' + rp(hpsBaru || lama.nilai_hps) + '). ' + (catatan ? 'Catatan: ' + catatan : '')
       });
 
-      await buatNotif(['role:Admin'], { id, nama: lama.nama_paket, opd: lama.opd_pengaju, kons: isKonsolidasi(lama.jenis_tenaga_alih_daya) }, 'warning', 'OPD mengganti penyedia, menunggu verifikasi Tahap 1', penyediaBaru);
+      await buatNotif(['role:Admin'], { id, nama: lama.nama_paket, opd: lama.opd_pengaju, kons: isKonsolidasi(lama.jenis_tenaga_alih_daya, penyediaBaru) }, 'warning', 'OPD mengganti penyedia, menunggu verifikasi Tahap 1', penyediaBaru);
       return { ok: true, message: 'Penyedia berhasil diganti dan diajukan kembali ke Verifikasi Tahap 1.' };
     }
 
@@ -1856,20 +1883,21 @@ const api = async (fn, ...args) => {
         created_at: firebase.firestore.FieldValue.serverTimestamp()
       });
       const pdu = (await ref.get()).data() || {};
-      await buatNotif(['satker:' + pdu.opd_pengaju], { id, nama: pdu.nama_paket, opd: pdu.opd_pengaju, kons: isKonsolidasi(pdu.jenis_tenaga_alih_daya) }, 'warning', 'Undangan klarifikasi: ' + du.tanggal + ' ' + du.waktu + ' WIB', du.tempat);
+      await buatNotif(['satker:' + pdu.opd_pengaju], { id, nama: pdu.nama_paket, opd: pdu.opd_pengaju, kons: isKonsolidasi(pdu.jenis_tenaga_alih_daya, pdu.calon_penyedia) }, 'warning', 'Undangan klarifikasi: ' + du.tanggal + ' ' + du.waktu + ' WIB', du.tempat);
       return { ok: true, message: 'Undangan klarifikasi berhasil dikirimkan ke OPD.' };
     }
 
     /* ---- REVISI PENGAJUAN ---- */
     case 'revisiPengajuan': {
       const [id, d] = args;
+      const kurangR = cekWajibServer(d); if (kurangR) return { ok: false, message: kurangR };
       await fbDb.collection('pengajuan').doc(id).update({
         nama_paket: d.nama, calon_penyedia: d.penyedia, nilai_hps: d.nilai,
         jenis_tenaga_alih_daya: d.jenis, jumlah_tenaga: d.jumlah, link_katalog: d.link,
         kode_rup: d.rup || null, pagu_anggaran: d.pagu || null,
         status: 'Menunggu Verifikasi Tahap 1', catatan_umum: '', catatan_item: {}
       });
-      await buatNotif(['role:Admin'], { id, nama: d.nama, opd: state.satker, kons: isKonsolidasi(d.jenis) }, 'warning', 'Revisi dikirim ulang, menunggu verifikasi Tahap 1');
+      await buatNotif(['role:Admin'], { id, nama: d.nama, opd: state.satker, kons: isKonsolidasi(d.jenis, d.penyedia) }, 'warning', 'Revisi dikirim ulang, menunggu verifikasi Tahap 1');
       return { ok: true, message: 'Revisi pengajuan ' + id + ' berhasil dikirim ulang.' };
     }
 
@@ -1906,7 +1934,7 @@ const api = async (fn, ...args) => {
       await ref.update(updateData);
 
       // Notifikasi ke pihak terkait
-      const info = { id, nama: pd.nama_paket, opd: pd.opd_pengaju, kons: isKonsolidasi(pd.jenis_tenaga_alih_daya) };
+      const info = { id, nama: pd.nama_paket, opd: pd.opd_pengaju, kons: isKonsolidasi(pd.jenis_tenaga_alih_daya, pd.calon_penyedia) };
       const kOpd = 'satker:' + pd.opd_pengaju;
       if (statusBaru === 'Menunggu Verifikasi Tahap 2') {
         await buatNotif([opsi && opsi.pokja ? 'user:' + opsi.pokja : null], info, 'info', 'Paket baru untuk diverifikasi');
@@ -1951,7 +1979,7 @@ const api = async (fn, ...args) => {
         created_at: firebase.firestore.FieldValue.serverTimestamp()
       });
       const pdl = (await ref.get()).data() || {};
-      await buatNotif(['user:' + pokja], { id, nama: pdl.nama_paket, opd: pdl.opd_pengaju, kons: isKonsolidasi(pdl.jenis_tenaga_alih_daya) }, 'info', 'Paket didelegasikan kepada Anda');
+      await buatNotif(['user:' + pokja], { id, nama: pdl.nama_paket, opd: pdl.opd_pengaju, kons: isKonsolidasi(pdl.jenis_tenaga_alih_daya, pdl.calon_penyedia) }, 'info', 'Paket didelegasikan kepada Anda');
       return { ok: true, message: 'Pengajuan ' + id + ' didelegasikan ke Pokja ' + pokja + '.' };
     }
 
@@ -2130,18 +2158,43 @@ $('#regForm').addEventListener('submit', async e => {
 async function muatReferensi() {
   try { state.ref = await api('getReferensi'); isiReferensi(); } catch (e) {}
 }
+/* ---------- Dropdown dengan opsi "Lainnya" (tulis manual) ---------- */
+const LAIN = '__lain__';
+function isiPilihan(selId, items, placeholder, labelLain) {
+  const el = $('#' + selId); if (!el) return;
+  const cur = el.value;
+  el.innerHTML = '<option value="">' + esc(placeholder) + '</option>' +
+    items.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('') +
+    '<option value="' + LAIN + '">' + esc(labelLain) + '</option>';
+  if (cur && (cur === LAIN || items.indexOf(cur) >= 0)) el.value = cur;
+}
+function sinkronLain(selId, lainId) {
+  const lain = $('#' + lainId), tampil = $('#' + selId).value === LAIN;
+  lain.style.display = tampil ? '' : 'none';
+  if (!tampil) lain.value = '';
+}
+function getPil(selId, lainId) { const v = $('#' + selId).value; return v === LAIN ? $('#' + lainId).value.trim() : v; }
+function setPil(selId, lainId, daftar, nilai) {
+  const el = $('#' + selId), n = normNama(nilai);
+  const cocok = (daftar || []).find(x => normNama(x) === n);
+  if (!nilai) el.value = '';
+  else if (cocok) el.value = cocok;
+  else { el.value = LAIN; $('#' + lainId).value = nilai; }
+  sinkronLain(selId, lainId);
+}
+const daftarPenyedia = () => ((state.ref && state.ref.penyedia) || []).map(p => p.nama);
+const daftarJenis = () => (state.ref && state.ref.jenis) || [];
+const getPenyedia = () => getPil('fPenyedia', 'fPenyediaLain');
+const getJenis = () => getPil('fJenis', 'fJenisLain');
+const adaDiDaftar = (daftar, nama) => daftar.some(x => normNama(x) === normNama(nama));
+
 function isiReferensi() {
   const r = state.ref; if (!r) return;
   $('#listSatker').innerHTML = r.satker.map(s => '<option value="' + esc(s) + '"></option>').join('');
-  
-  // Searchable Datalist untuk Calon Penyedia
-  $('#listPenyedia').innerHTML = r.penyedia.map(p => {
-    const label = p.nama + (p.kategori === 'Non UMKK' ? ' [Non UMKK]' : ' [UMKK]');
-    return '<option value="' + esc(p.nama) + '">' + esc(label) + '</option>';
-  }).join('');
-
-  // Searchable Datalist untuk Jenis Tenaga
-  $('#listJenis').innerHTML = r.jenis.map(s => '<option value="' + esc(s) + '"></option>').join('');
+  isiPilihan('fPenyedia', daftarPenyedia(), '— Pilih calon penyedia —', 'Penyedia Lainnya');
+  isiPilihan('gpPenyediaBaru', daftarPenyedia(), '— Pilih calon penyedia —', 'Penyedia Lainnya');
+  isiPilihan('fJenis', daftarJenis(), '— Pilih jenis tenaga alih daya —', 'Jenis Lainnya');
+  sinkronLain('fPenyedia', 'fPenyediaLain'); sinkronLain('gpPenyediaBaru', 'gpPenyediaLain'); sinkronLain('fJenis', 'fJenisLain');
 }
 
 // Deteksi Kategori Penyedia saat Ketik / Pilih
@@ -2159,16 +2212,18 @@ function updateBadgePenyedia(nama, elBadge) {
   }
 }
 
-$('#fPenyedia').addEventListener('input', () => {
-  const nama = $('#fPenyedia').value.trim();
+['fPenyedia', 'fPenyediaLain'].forEach(id => $('#' + id).addEventListener('input', () => {
+  sinkronLain('fPenyedia', 'fPenyediaLain');
+  const nama = getPenyedia();
   updateBadgePenyedia(nama, $('#badgeKategoriPenyedia'));
   if (isAdmin(state.role)) cekPenyedia(nama);
-});
+}));
+$('#fJenis').addEventListener('input', () => sinkronLain('fJenis', 'fJenisLain'));
 
-$('#gpPenyediaBaru').addEventListener('input', () => {
-  const nama = $('#gpPenyediaBaru').value.trim();
-  updateBadgePenyedia(nama, $('#gpBadgeKategori'));
-});
+['gpPenyediaBaru', 'gpPenyediaLain'].forEach(id => $('#' + id).addEventListener('input', () => {
+  sinkronLain('gpPenyediaBaru', 'gpPenyediaLain');
+  updateBadgePenyedia(getPil('gpPenyediaBaru', 'gpPenyediaLain'), $('#gpBadgeKategori'));
+}));
 
 $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -2450,7 +2505,7 @@ function renderGrupBar() {
   bar.style.display = '';
   bar.innerHTML = '<div class="seg">' + [['konsolidasi', 'Konsolidasi', g.konsolidasi], ['non', 'Non Konsolidasi', g.non]].map(d =>
     '<button type="button" data-grup="' + d[0] + '" class="' + (state.grup === d[0] ? 'on' : '') + '">' + d[1] + ' <b>' + d[2] + '</b></button>').join('') + '</div>' +
-    '<span class="small-note">' + (state.grup === 'konsolidasi' ? 'Jenis tenaga sesuai daftar produk konsolidasi.' : 'Jenis tenaga di luar daftar produk konsolidasi.') + '</span>';
+    '<span class="small-note">' + (state.grup === 'konsolidasi' ? 'Jenis tenaga dan penyedia sesuai daftar (dropdown).' : 'Memakai Jenis Lainnya atau Penyedia Lainnya (ditulis manual).') + '</span>';
 }
 
 /* Fitur 4: Render Grid Pengajuan - Dibuat Per OPD untuk Admin & Pokja */
@@ -3232,9 +3287,9 @@ function bukaCetakKertas(id) {
 
 function cetakKertasDraftForm() {
   const nama = $('#fNama').value.trim();
-  const penyedia = $('#fPenyedia').value.trim();
+  const penyedia = getPenyedia();
   const hps = getNilai();
-  const jenis = $('#fJenis').value.trim();
+  const jenis = getJenis();
   const jumlah = Number($('#fJumlah').value) || 0;
   const link = $('#fLink').value.trim();
 
@@ -3280,7 +3335,7 @@ function bukaGantiPenyedia(id) {
   gantiPenId = id;
   $('#gpPaket').textContent = p.Nama_Paket;
   $('#gpPenyediaLama').textContent = p.Calon_Penyedia;
-  $('#gpPenyediaBaru').value = '';
+  $('#gpPenyediaBaru').value = ''; $('#gpPenyediaLain').value = ''; sinkronLain('gpPenyediaBaru', 'gpPenyediaLain');
   $('#gpHpsBaru').value = Number(p.Nilai_HPS).toLocaleString('id-ID');
   $('#gpCatatan').value = '';
   $('#gpBadgeKategori').style.display = 'none';
@@ -3289,8 +3344,9 @@ function bukaGantiPenyedia(id) {
 
 $('#btnSimpanGantiPen').addEventListener('click', async () => {
   if (!gantiPenId) return;
-  const pBaru = $('#gpPenyediaBaru').value.trim();
-  if (!pBaru) { toast('Ketik atau pilih calon penyedia baru.', 'warning'); $('#gpPenyediaBaru').focus(); return; }
+  const pBaru = getPil('gpPenyediaBaru', 'gpPenyediaLain');
+  if (!pBaru) { toast($('#gpPenyediaBaru').value === LAIN ? 'Tulis nama calon penyedia baru.' : 'Pilih calon penyedia baru dari dropdown.', 'warning'); ($('#gpPenyediaBaru').value === LAIN ? $('#gpPenyediaLain') : $('#gpPenyediaBaru')).focus(); return; }
+  if ($('#gpPenyediaBaru').value === LAIN && adaDiDaftar(daftarPenyedia(), pBaru)) { toast('Nama ini sudah ada di daftar. Pilih dari dropdown.', 'warning'); $('#gpPenyediaBaru').focus(); return; }
   const hpsBaru = parseInt($('#gpHpsBaru').value.replace(/\D/g, ''), 10) || 0;
   const catatan = $('#gpCatatan').value.trim();
 
@@ -3486,7 +3542,7 @@ function renderPenyediaInfo() {
   box.innerHTML = miniRuler(p.total, nilai) + '<div class="pen-text">' + awal + '<br>' + akhir + '</div>';
 }
 
-const dataForm = () => ({ link: $('#fLink').value.trim(), nama: $('#fNama').value, penyedia: $('#fPenyedia').value, nilai: getNilai(), jenis: $('#fJenis').value, jumlah: Number($('#fJumlah').value), rup: ($('#fRup').value || '').trim(), pagu: parseInt(($('#fPagu').value || '').replace(/\D/g,''), 10) || 0 });
+const dataForm = () => ({ link: $('#fLink').value.trim(), nama: $('#fNama').value, penyedia: getPenyedia(), nilai: getNilai(), jenis: getJenis(), jumlah: Number($('#fJumlah').value), rup: ($('#fRup').value || '').trim(), pagu: parseInt(($('#fPagu').value || '').replace(/\D/g,''), 10) || 0 });
 
 function resetForm() {
   $('#formPengajuan').reset();
@@ -3496,6 +3552,8 @@ function resetForm() {
   $('#btnKirim').textContent = 'Kirim pengajuan';
   $('#fileSection').style.display = '';
   $('#badgeKategoriPenyedia').style.display = 'none';
+  sinkronLain('fPenyedia', 'fPenyediaLain'); sinkronLain('fJenis', 'fJenisLain');
+  bersihSemuaErr();
   renderPenyediaInfo();
 }
 function bukaForm() { if (!state.ref) muatReferensi(); if (state.tab !== 'pengajuan') { state.tab = 'pengajuan'; } state.sideAktif = 'baru'; renderTab(); resetForm(); $('#panelForm').style.display = ''; $('#panelForm').scrollIntoView({ behavior: 'smooth' }); $('#fNama').focus(); }
@@ -3507,10 +3565,10 @@ function mulaiEdit(id) {
   resetForm();
   state.editingId = id;
   $('#fNama').value = p.Nama_Paket;
-  $('#fPenyedia').value = p.Calon_Penyedia;
+  setPil('fPenyedia', 'fPenyediaLain', daftarPenyedia(), p.Calon_Penyedia);
   updateBadgePenyedia(p.Calon_Penyedia, $('#badgeKategoriPenyedia'));
   fHps.value = Number(p.Nilai_HPS).toLocaleString('id-ID');
-  $('#fJenis').value = p.Jenis_Tenaga_Alih_Daya;
+  setPil('fJenis', 'fJenisLain', daftarJenis(), p.Jenis_Tenaga_Alih_Daya);
   $('#fJumlah').value = p.Jumlah_Tenaga;
   $('#fLink').value = p.Link_Katalog || '';
   $('#fRup').value = p.Kode_RUP || '';
@@ -3522,18 +3580,83 @@ function mulaiEdit(id) {
   if (isAdmin(state.role)) cekPenyedia(p.Calon_Penyedia);
   $('#panelForm').scrollIntoView({ behavior: 'smooth' });
 }
+/* ---------- Validasi isian wajib (pesan "Harus diisi" di bawah kolom) ---------- */
+function bersihErr(el) {
+  if (!el) return;
+  el.classList.remove('is-invalid');
+  const f = el.closest('.fld'); if (!f) return;
+  const m = f.querySelector(':scope > .fld-err'); if (m) m.remove();
+  f.querySelectorAll('.is-invalid').forEach(x => { if (x !== el && (x.value || '').trim() && x.style.display !== 'none') x.classList.remove('is-invalid'); });
+}
+function bersihSemuaErr() {
+  document.querySelectorAll('#formPengajuan .fld-err, #formPengajuan .sec-err-msg').forEach(x => x.remove());
+  document.querySelectorAll('#formPengajuan .is-invalid').forEach(x => x.classList.remove('is-invalid'));
+}
+function tandaiErr(el, pesan, daftar) {
+  el.classList.add('is-invalid');
+  const f = el.closest('.fld');
+  if (f) { const lama = f.querySelector(':scope > .fld-err'); if (lama) lama.remove(); const m = document.createElement('div'); m.className = 'fld-err'; m.textContent = pesan; f.appendChild(m); }
+  daftar.push(el);
+}
+function validasiForm(baru, sumber) {
+  bersihSemuaErr();
+  const err = [];
+  const W = 'Harus diisi.', P = 'Harus dipilih.';
+  if (!$('#fNama').value.trim()) tandaiErr($('#fNama'), W, err);
+
+  const selP = $('#fPenyedia').value;
+  if (!selP) tandaiErr($('#fPenyedia'), P, err);
+  else if (selP === LAIN) {
+    const t = $('#fPenyediaLain').value.trim();
+    if (!t) tandaiErr($('#fPenyediaLain'), 'Harus diisi: tulis nama penyedia.', err);
+    else if (adaDiDaftar(daftarPenyedia(), t)) tandaiErr($('#fPenyediaLain'), 'Nama ini sudah ada di daftar. Pilih dari dropdown.', err);
+  }
+
+  const lk = $('#fLink').value.trim();
+  if (!lk) tandaiErr($('#fLink'), W, err); else if (!urlAman(lk)) tandaiErr($('#fLink'), 'Harus diawali http:// atau https://.', err);
+
+  if (!(getNilai() > 0)) tandaiErr($('#fHps'), W, err);
+  if (!(parseInt(($('#fPagu').value || '').replace(/\D/g, ''), 10) > 0)) tandaiErr($('#fPagu'), W, err);
+
+  const selJ = $('#fJenis').value;
+  if (!selJ) tandaiErr($('#fJenis'), P, err);
+  else if (selJ === LAIN) {
+    const t = $('#fJenisLain').value.trim();
+    if (!t) tandaiErr($('#fJenisLain'), 'Harus diisi: tulis jenis tenaga.', err);
+    else if (adaDiDaftar(daftarJenis(), t)) tandaiErr($('#fJenisLain'), 'Jenis ini sudah ada di daftar. Pilih dari dropdown.', err);
+  }
+
+  if (!(Number($('#fJumlah').value) >= 1)) tandaiErr($('#fJumlah'), W, err);
+  if (!$('#fRup').value.trim()) tandaiErr($('#fRup'), W, err);
+
+  if (baru) {
+    const kurang = Object.keys(JENIS_DOK).filter(k => !sumber[k]);
+    if (kurang.length) {
+      const m = document.createElement('div'); m.className = 'fld-err sec-err-msg';
+      m.textContent = 'Harus diisi: unggah atau tautkan ' + kurang.map(k => DOK_PENDEK[k]).join(' dan ') + '.';
+      $('#pickList').insertAdjacentElement('afterend', m);
+      err.push(m);
+    }
+  }
+  if (err.length) {
+    const first = err[0];
+    first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (first.focus && !first.classList.contains('fld-err')) first.focus({ preventScroll: true });
+    toast('Masih ada isian wajib (*) yang belum lengkap. Periksa kolom bertanda merah.', 'warning');
+    return false;
+  }
+  return true;
+}
+$('#formPengajuan').addEventListener('input', e => bersihErr(e.target));
+$('#formPengajuan').addEventListener('change', e => { bersihErr(e.target); if (e.target.closest('#fileSection')) { const m = document.querySelector('#formPengajuan .sec-err-msg'); if (m) m.remove(); } });
 $('#formPengajuan').addEventListener('submit', e => { e.preventDefault(); kirimForm(false); });
 
 async function kirimForm(konfirmasi) {
   const baru = !state.editingId;
   const sumber = baru ? sumberDok($('#fileSection')) : {};
-  if (!urlAman($('#fLink').value)) { toast('Link katalog harus diawali http:// atau https://.', 'warning'); $('#fLink').focus(); return; }
+  if (!validasiForm(baru, sumber)) return;
   for (const k of Object.keys(sumber)) {
     if (sumber[k].link && !urlAman(sumber[k].link)) { toast('Tautan ' + DOK_PENDEK[k] + ' harus diawali http:// atau https://.', 'warning'); return; }
-  }
-  if (baru) {
-    const kurang = Object.keys(JENIS_DOK).filter(k => !sumber[k]);
-    if (kurang.length) { toast('Lengkapi dokumen: ' + kurang.map(k => JENIS_DOK[k]).join(', ') + '.', 'warning'); return; }
   }
   const btn = $('#btnKirim'); busy(btn, true, 'Mengirim');
   try {
@@ -3845,7 +3968,7 @@ async function kabarKlarifikasi(id, teks) {
   try {
     const sp = await fbDb.collection('pengajuan').doc(id).get(); if (!sp.exists) return;
     const pd = sp.data(), pk = pd.pokja_ditugaskan ? 'user:' + pd.pokja_ditugaskan : null;
-    const info = { id, nama: pd.nama_paket, opd: pd.opd_pengaju, kons: isKonsolidasi(pd.jenis_tenaga_alih_daya) };
+    const info = { id, nama: pd.nama_paket, opd: pd.opd_pengaju, kons: isKonsolidasi(pd.jenis_tenaga_alih_daya, pd.calon_penyedia) };
     const tujuan = isOpd(state.role) ? ['role:Admin', pk] : isAdmin(state.role) ? ['satker:' + pd.opd_pengaju, pk] : ['satker:' + pd.opd_pengaju, 'role:Admin'];
     await buatNotif(tujuan, info, 'info', 'Pesan klarifikasi baru dari ' + state.username, teks.length > 100 ? teks.slice(0, 100) + '...' : teks);
   } catch (e) { console.warn('Notifikasi klarifikasi gagal:', e); }
