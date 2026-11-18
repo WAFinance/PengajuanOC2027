@@ -163,7 +163,7 @@ async function buatSesi(request, env, user, c) {
 
   if (ALLOWED_EXT.indexOf(ext) < 0) throw new HttpError(400, 'Format harus PDF, DOC, DOCX, XLS, atau XLSX.');
   if (!(size > 0) || size > MAX_BYTES) throw new HttpError(400, 'Ukuran berkas harus 1 byte sampai 10 MB.');
-  if (!/^PGJ-\d{8}-\d{4}$/.test(id)) throw new HttpError(400, 'ID pengajuan tidak valid.');
+  if (!/^PGJ-(?:[A-Z0-9]{1,30}-)?\d{8}-\d{1,6}$/.test(id)) throw new HttpError(400, 'ID pengajuan tidak valid.');
   if (!/^[a-z]{2,12}$/.test(jenis)) throw new HttpError(400, 'Jenis dokumen tidak valid.');
   const mime = /^[\w.+-]+\/[\w.+-]+$/.test(String(b.mime || '')) ? b.mime : 'application/octet-stream';
 
