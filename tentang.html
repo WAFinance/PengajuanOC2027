@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aplikasi Pengajuan Tenaga Alih Daya - BPBJ Kota Surakarta</title>
+<meta name="description" content="Aplikasi untuk mengajukan dan memverifikasi pengadaan tenaga alih daya di lingkungan Pemerintah Kota Surakarta.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --ink: #17232d;
+    --muted: #55626d;
+    --line: #d5dde3;
+    --accent: #1d5468;
+    --accent-ink: #ffffff;
+    --panel: #f3f6f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10181e;
+      --ink: #e8eef2;
+      --muted: #a2b0ba;
+      --line: #2a3943;
+      --accent: #7cc0d6;
+      --accent-ink: #0b1418;
+      --panel: #17222a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 17px/1.65 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 3.5rem 1.25rem 2rem; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.75rem; margin-bottom: 2rem; }
+  .instansi { margin: 0 0 .5rem; color: var(--muted); font-size: .95rem; }
+  h1 { margin: 0 0 .75rem; font-size: 2rem; line-height: 1.2; letter-spacing: -.01em; }
+  h2 { margin: 2.25rem 0 .5rem; font-size: 1.2rem; line-height: 1.3; }
+  p, ul { margin: 0 0 1rem; }
+  ul { padding-left: 1.25rem; }
+  li { margin-bottom: .4rem; }
+  .lead { font-size: 1.1rem; }
+  .aksi { margin-top: 1.5rem; }
+  .tombol {
+    display: inline-block;
+    padding: .65rem 1.25rem;
+    border-radius: 6px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .catatan {
+    background: var(--panel);
+    border-left: 4px solid var(--accent);
+    padding: .9rem 1.1rem;
+    border-radius: 0 6px 6px 0;
+  }
+  a { color: var(--accent); }
+  a:focus-visible, .tombol:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  footer { max-width: 44rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .92rem; }
+  footer a { margin-right: 1.25rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="instansi">Bagian Pengadaan Barang dan Jasa, Sekretariat Daerah Kota Surakarta</p>
+    <h1>Aplikasi Pengajuan Tenaga Alih Daya</h1>
+    <p class="lead">Aplikasi web untuk mengajukan dan memverifikasi pengadaan tenaga alih daya (misalnya kebersihan, keamanan, dan pengemudi) oleh perangkat daerah di lingkungan Pemerintah Kota Surakarta.</p>
+    <p class="aksi"><a class="tombol" href="/">Masuk ke aplikasi</a></p>
+  </header>
+
+  <h2>Fungsi aplikasi</h2>
+  <p>Aplikasi ini menggantikan pengajuan manual dengan alur yang tercatat dan dapat dilacak:</p>
+  <ul>
+    <li><strong>Perangkat daerah (OPD)</strong> mengajukan kebutuhan tenaga alih daya, mengisi data paket dan calon penyedia, lalu mengunggah dokumen KAK dan HPS.</li>
+    <li><strong>Admin atau Tim Konsolidasi</strong> memeriksa pengajuan pada tahap pertama dan menugaskannya ke Kelompok Kerja.</li>
+    <li><strong>Kelompok Kerja (Pokja)</strong> memverifikasi pengajuan yang ditugaskan kepadanya pada tahap kedua.</li>
+    <li>Setiap pihak dapat saling berkomunikasi melalui kolom klarifikasi pada pengajuan yang bersangkutan.</li>
+  </ul>
+
+  <h2>Siapa yang dapat memakai</h2>
+  <p>Aplikasi hanya untuk pegawai perangkat daerah dan petugas pengadaan Pemerintah Kota Surakarta. Pendaftaran akun baru memerlukan persetujuan Admin sebelum akun dapat dipakai. Setiap pengguna hanya dapat melihat pengajuan yang menjadi bagiannya.</p>
+
+  <h2>Penggunaan Google Drive</h2>
+  <p>Berkas yang diunggah pengguna disimpan pada folder Google Drive milik pengelola aplikasi. Pengguna tidak diminta menghubungkan akun Google pribadi mereka.</p>
+  <p class="catatan">Aplikasi hanya mengakses folder dan berkas yang dibuatnya sendiri (cakupan akses <code>drive.file</code>). Aplikasi tidak membaca, mengubah, atau menghapus berkas Google Drive lainnya, dan tidak membagikan data Google ke pihak ketiga.</p>
+
+  <h2>Data yang disimpan</h2>
+  <p>Aplikasi menyimpan nama pengguna, alamat email, satuan kerja, peran, data pengajuan, dan dokumen pendukung yang diunggah. Data dipakai hanya untuk proses pengajuan dan verifikasi pengadaan. Rincian lengkap tersedia pada <a href="/privacy.html">Kebijakan Privasi</a> dan <a href="/terms.html">Syarat Layanan</a>.</p>
+
+  <h2>Kontak</h2>
+  <p>Pertanyaan tentang aplikasi dapat disampaikan kepada Bagian Pengadaan Barang dan Jasa, Sekretariat Daerah Kota Surakarta.</p>
+</main>
+<footer>
+  <a href="/privacy.html">Kebijakan Privasi</a>
+  <a href="/terms.html">Syarat Layanan</a>
+</footer>
+</body>
+</html>
