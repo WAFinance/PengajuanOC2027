@@ -158,6 +158,10 @@
     .btn-sidemin { display: none; flex: 0 0 auto; width: 30px; height: 30px; place-items: center; border: 1px solid var(--side-line, var(--line2)); border-radius: 8px; background: transparent; color: var(--side-icon, var(--muted)); transition: background-color .15s ease, color .15s ease; }
     .btn-sidemin:hover { background: var(--tab-hover, var(--hover)); color: var(--side-text, var(--text)); }
     .btn-sidemin i { transition: transform .2s ease; }
+    .side-cta { display: flex; align-items: center; justify-content: center; gap: .55rem; width: 100%; padding: .75rem .9rem; margin: 0 0 .2rem; border: 0; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-size: .9rem; font-weight: 800; white-space: nowrap; box-shadow: 0 6px 16px rgba(var(--accent-rgb), .28); transition: background-color .15s ease, transform .15s ease; }
+    .side-cta:hover { background: color-mix(in srgb, var(--accent) 85%, white); transform: translateY(-1px); }
+    .side-cta:active { background: color-mix(in srgb, var(--accent) 88%, black); transform: none; }
+    .side-cta i { font-size: 1.1rem; }
     .side-sec { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--side-faint, var(--faint)); margin: .9rem .6rem .35rem; white-space: nowrap; }
     .side-link { position: relative; display: flex; align-items: center; gap: .65rem; width: 100%; padding: .6rem .75rem; border: 0; border-radius: 10px; background: none; color: var(--side-text, var(--text)); font-size: .88rem; font-weight: 600; text-align: left; text-decoration: none; white-space: nowrap; transition: background-color .15s ease, color .15s ease; }
     .side-link i { font-size: 1.05rem; color: var(--side-icon, var(--muted)); width: 1.2rem; text-align: center; flex: 0 0 1.2rem; }
@@ -179,8 +183,10 @@
       /* Sidebar diminimalkan: hanya ikon */
       #appView.with-side.side-min { padding-left: 76px; }
       #appView.with-side.side-min .side { width: 76px; padding: 1rem .6rem; }
-      .side-min .side-head { flex-direction: column; gap: .7rem; margin-bottom: .8rem; }
-      .side-min .side-head .logo span { display: none; }
+      .side-min .side-head { justify-content: center; margin: .1rem 0 .8rem; }
+      .side-min .side-head .logo { display: none; }
+      .side-min .side-cta { padding: .75rem 0; }
+      .side-min .side-cta .lbl { display: none; }
       .side-min .btn-sidemin i { transform: rotate(180deg); }
       .side-min .side-sec { height: 1px; margin: .7rem .5rem; padding: 0; background: var(--side-line, var(--line)); }
       .side-min .side-sec span { display: none; }
@@ -302,6 +308,31 @@
     html.acc-on { --accent-text: var(--accent-text-d); }
     html.acc-on[data-bs-theme="light"] { --accent-text: var(--accent-text-l); }
     i.text-warning, b.text-warning { color: var(--accent-text) !important; }
+    /* ---------- Progress unggah ---------- */
+    .upl-panel { margin: 0 0 1.1rem; padding: 1rem 1.1rem; background: var(--card); border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 6px 18px var(--shadow); }
+    .upl-head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; font-size: .88rem; margin-bottom: .55rem; }
+    .upl-head i { color: var(--accent-text); margin-right: .35rem; }
+    .upl-total-txt { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .upl-bar { height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+    .upl-total { height: 10px; margin-bottom: .9rem; }
+    .upl-fill { height: 100%; width: 0; border-radius: 999px; background: var(--accent); transition: width .25s ease, background-color .2s ease; }
+    .upl-fill.active { background-image: linear-gradient(45deg, rgba(255,255,255,.28) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.28) 50%, rgba(255,255,255,.28) 75%, transparent 75%); background-size: 1rem 1rem; animation: uplstripe .9s linear infinite; }
+    .upl-fill.done { background-color: var(--green); background-image: none; animation: none; }
+    .upl-fill.err { background-color: var(--red); background-image: none; animation: none; }
+    @keyframes uplstripe { to { background-position: 1rem 0; } }
+    @media (prefers-reduced-motion: reduce) { .upl-fill.active { animation: none; } .upl-fill { transition: none; } }
+    .upl-row { margin-bottom: .8rem; }
+    .upl-top { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-bottom: .3rem; font-size: .84rem; font-weight: 700; }
+    .upl-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .upl-name small { color: var(--muted); font-weight: 600; }
+    .upl-name i { color: var(--accent-text); margin-right: .3rem; }
+    .upl-pct { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--muted); }
+    .upl-row.done .upl-pct { color: var(--green); } .upl-row.err .upl-pct { color: var(--red); }
+    .upl-sub { min-height: 1.1em; margin-top: .25rem; font-size: .74rem; color: var(--muted); }
+    .upl-row.err .upl-sub { color: var(--red); font-weight: 600; }
+    .upl-final { display: flex; align-items: center; gap: .5rem; padding-top: .7rem; border-top: 1px solid var(--line); font-size: .84rem; font-weight: 700; }
+    .upl-final.selesai { color: var(--green); } .upl-final.gagal { color: var(--red); }
+
     /* ---------- Validasi formulir ---------- */
     .fld-err { display: flex; align-items: center; gap: .35rem; margin-top: .4rem; color: var(--red); font-size: .78rem; font-weight: 700; }
     .fld-err::before { content: "\F333"; font-family: "bootstrap-icons"; font-weight: 400; }
@@ -1191,7 +1222,21 @@ async function pesanGalatWorker(resp, awal) {
 }
 
 // Unggah satu berkas ke Google Drive; mengembalikan { url, nama, ref } (ref = format simpan di Firestore)
-async function uploadKeDrive(id, jenis, file) {
+function putDenganProgres(url, mime, file, onProg) {
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    const putus = () => reject(new Error('Unggah ke Drive terputus (periksa koneksi lalu coba lagi).'));
+    x.open('PUT', url);
+    x.setRequestHeader('Content-Type', mime);
+    x.upload.onprogress = e => { if (e.lengthComputable) onProg(e.loaded, e.total); };
+    x.onload = () => resolve({ status: x.status, ok: x.status >= 200 && x.status < 300, text: x.responseText });
+    x.onerror = putus; x.onabort = putus; x.ontimeout = putus;
+    x.send(file);
+  });
+}
+async function uploadKeDrive(id, jenis, file, onProg) {
+  const lapor = typeof onProg === 'function' ? onProg : () => {};
+  lapor({ fase: 'sesi', loaded: 0, total: file.size });
   if (/GANTI-DENGAN/.test(DRIVE_WORKER_URL)) {
     throw new Error('Konfigurasi penyimpanan belum diisi (DRIVE_WORKER_URL).');
   }
@@ -1215,16 +1260,12 @@ async function uploadKeDrive(id, jenis, file) {
   if (!sesi.uploadUrl) throw new Error('Layanan unggah tidak memberi alamat sesi.');
 
   // 2) Kirim berkas langsung ke Google Drive (tidak melewati Worker)
-  let up;
-  try {
-    up = await fetch(sesi.uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: file });
-  } catch (e) {
-    throw new Error('Unggah ke Drive terputus (periksa koneksi lalu coba lagi).');
-  }
-  if (!up.ok) throw await pesanGalatWorker(up, 'Unggah ke Drive gagal');
+  const up = await putDenganProgres(sesi.uploadUrl, mime, file, (l, t) => lapor({ fase: l >= t ? 'proses' : 'kirim', loaded: l, total: t }));
+  if (!up.ok) throw await pesanGalatWorker({ status: up.status, json: async () => JSON.parse(up.text) }, 'Unggah ke Drive gagal');
   let hasil = {};
-  try { hasil = await up.json(); } catch (e) {}
+  try { hasil = JSON.parse(up.text); } catch (e) {}
   if (!hasil.id) throw new Error('Drive tidak mengembalikan ID berkas.');
+  lapor({ fase: 'selesai', loaded: file.size, total: file.size });
   return { url: '', nama, ref: 'gdrive:' + hasil.id + '|' + nama };
 }
 
@@ -2007,9 +2048,9 @@ const api = async (fn, ...args) => {
 
     /* ---- DOKUMEN (Supabase Storage & Tautan) — dipakai tombol "Lengkapi / Ganti berkas" ---- */
     case 'unggahDokumen': {
-      const [id, jenis, , file] = args;
+      const [id, jenis, , file, onProg] = args;
       try {
-        const up = await uploadKeDrive(id, jenis, file);
+        const up = await uploadKeDrive(id, jenis, file, onProg);
         try {
           await fbDb.collection('pengajuan').doc(id).update({ [kolomDok(jenis)]: up.ref });
         } catch (e) { await hapusDariDrive(up.ref); throw e; }
@@ -2627,11 +2668,11 @@ function renderSide() {
   const admin = isAdmin(state.role), opd = isOpd(state.role);
   const menunggu = state.akun ? state.akun.filter(a => a.status === 'Menunggu').length : 0;
   const L = (key, ikon, teks, on, extra, badge) => '<button type="button" class="side-link' + (on ? ' on' : '') + '" data-side="' + key + '" title="' + esc(teks) + '"' + (extra || '') + '><i class="bi ' + ikon + '"></i><span class="lbl">' + teks + '</span>' + (badge ? '<span class="side-badge">' + badge + '</span>' : '') + '</button>';
-  const formAktif = state.sideAktif === 'baru';
-  let h = '<div class="side-sec"><span>Menu</span></div>' + L('tab:dashboard', 'bi-speedometer2', 'Dashboard', state.tab === 'dashboard');
+  // OPD: tombol terpisah "Ajukan Paket Baru" di paling atas, di atas menu Dashboard
+  let h = opd ? '<button type="button" class="side-cta" data-act="baru" title="Ajukan Paket Baru"><i class="bi bi-plus-circle-fill"></i><span class="lbl">Ajukan Paket Baru</span></button>' : '';
+  h += '<div class="side-sec"><span>Menu</span></div>' + L('tab:dashboard', 'bi-speedometer2', 'Dashboard', state.tab === 'dashboard');
   if (opd) {
-    h += L('tab:pengajuan', 'bi-grid-1x2-fill', 'Pengajuan Saya', state.tab === 'pengajuan' && !formAktif) +
-         L('baru', 'bi-plus-circle', 'Ajukan Paket Baru', state.tab === 'pengajuan' && formAktif, ' data-act="baru"');
+    h += L('tab:pengajuan', 'bi-grid-1x2-fill', 'Pengajuan Saya', state.tab === 'pengajuan');
   } else if (admin) {
     h += L('tab:pengajuan', 'bi-grid-1x2-fill', 'Pengajuan per OPD', state.tab === 'pengajuan') +
          L('tab:penyedia', 'bi-bar-chart-steps', 'Akumulasi Penyedia', state.tab === 'penyedia') +
@@ -3076,7 +3117,7 @@ document.addEventListener('click', e => {
   const id = b.dataset.id, act = b.dataset.act;
   if (act === 'pokja-semua') { document.querySelectorAll('#listPokja .opd-group-card').forEach(c => { state.expandedOpd[c.id] = b.dataset.buka === '1'; }); return renderPokja(); }
   if (act === 'akun') return ubahAkun(b.dataset.user, b.dataset.status, b);
-  if (act === 'baru') return bukaForm();
+  if (act === 'baru') { tutupSide(); return bukaForm(); }
   if (act === 'tabpen') return setTab('penyedia');
   if (act === 'refresh') { return muatData(); }
   if (act === 'klarif') return bukaKlarifikasi(id);
@@ -3467,15 +3508,99 @@ function sumberDok(wadah) {
   return out;
 }
 
+/* ---------- Panel progress unggah ---------- */
+function fmtUkuran(b) { b = Number(b) || 0; return b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
+const PANEL_KOSONG = { init() {}, update() {}, akhir() {}, tutup() {} };
+function buatPanelUpload(anchor, pos) {
+  document.querySelectorAll('.upl-panel').forEach(x => x.remove());
+  const el = document.createElement('div');
+  el.className = 'upl-panel'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+  anchor.insertAdjacentElement(pos, el);
+  const baris = {}, mulai = {};
+  const total = () => {
+    let l = 0, t = 0;
+    Object.keys(baris).forEach(k => { const b = baris[k]; if (!b.file) return; t += b.file.size; l += b.selesai ? b.file.size : Math.min(b.loaded || 0, b.file.size); });
+    const pct = t ? Math.floor(l / t * 100) : 0;
+    const sel = Object.keys(baris).filter(k => baris[k].file && baris[k].selesai).length, n = Object.keys(baris).filter(k => baris[k].file).length;
+    const f = el.querySelector('.upl-total .upl-fill'); if (f) f.style.width = pct + '%';
+    const tx = el.querySelector('.upl-total-txt'); if (tx) tx.textContent = sel + '/' + n + ' berkas • ' + pct + '%';
+    return { pct, sel, n };
+  };
+  return {
+    init(daftar) {
+      el.innerHTML = '<div class="upl-head"><b><i class="bi bi-cloud-arrow-up-fill"></i>Proses unggah dokumen</b><span class="upl-total-txt">0%</span></div>' +
+        '<div class="upl-bar upl-total"><div class="upl-fill active"></div></div><div class="upl-rows"></div><div class="upl-final" style="display:none"></div>';
+      const rows = el.querySelector('.upl-rows');
+      daftar.forEach(d => {
+        const r = document.createElement('div'); r.className = 'upl-row';
+        r.innerHTML = '<div class="upl-top"><span class="upl-name"><i class="bi ' + (d.file ? 'bi-file-earmark-arrow-up' : 'bi-link-45deg') + '"></i>' + esc(d.label) +
+          (d.file ? ' <small>(' + esc(d.file.name) + ', ' + fmtUkuran(d.file.size) + ')</small>' : ' <small>(tautan)</small>') + '</span><span class="upl-pct">Menunggu</span></div>' +
+          '<div class="upl-bar"><div class="upl-fill"></div></div><div class="upl-sub"></div>';
+        rows.appendChild(r);
+        baris[d.key] = { el: r, file: d.file || null, loaded: 0, selesai: false };
+      });
+      total();
+    },
+    update(key, info) {
+      const b = baris[key]; if (!b) return;
+      const r = b.el, fill = r.querySelector('.upl-fill'), pct = r.querySelector('.upl-pct'), sub = r.querySelector('.upl-sub');
+      r.classList.remove('done', 'err'); fill.classList.remove('done', 'err', 'active');
+      const f = info.fase;
+      if (f === 'sesi') { pct.textContent = 'Menyiapkan…'; fill.style.width = '4%'; fill.classList.add('active'); sub.textContent = 'Meminta izin unggah…'; }
+      else if (f === 'kirim' || f === 'proses') {
+        const t = info.total || (b.file && b.file.size) || 1, l = Math.min(info.loaded || 0, t); b.loaded = l;
+        if (!mulai[key]) mulai[key] = Date.now();
+        const p = Math.floor(l / t * 100); fill.style.width = p + '%'; fill.classList.add('active');
+        if (f === 'proses') { pct.textContent = '100%'; sub.textContent = 'Memproses di Google Drive…'; }
+        else {
+          pct.textContent = p + '%';
+          const dt = (Date.now() - mulai[key]) / 1000, kec = dt > 0.4 ? l / dt : 0;
+          sub.textContent = fmtUkuran(l) + ' / ' + fmtUkuran(t) + (kec ? ' • ' + fmtUkuran(kec) + '/dtk' + ((t - l) / kec > 1.5 ? ' • sisa ±' + Math.ceil((t - l) / kec) + ' dtk' : '') : '');
+        }
+      }
+      else if (f === 'selesai' || f === 'link') {
+        b.selesai = true; r.classList.add('done'); fill.classList.add('done'); fill.style.width = '100%';
+        pct.textContent = f === 'link' ? '✓ Tersimpan' : '✓ Selesai'; sub.textContent = f === 'link' ? 'Tautan dokumen dicatat.' : 'Berkas berhasil diunggah.';
+      }
+      else if (f === 'gagal') { r.classList.add('err'); fill.classList.add('err'); pct.textContent = 'Gagal'; sub.textContent = info.pesan || 'Unggah gagal.'; }
+      const tt = total();
+      const tf = el.querySelector('.upl-total .upl-fill');
+      if (tf) { tf.classList.toggle('active', f !== 'gagal' && tt.sel < tt.n); tf.classList.toggle('done', tt.n > 0 && tt.sel === tt.n); tf.classList.toggle('err', f === 'gagal'); }
+    },
+    akhir(teks, st) {
+      const fin = el.querySelector('.upl-final'); if (!fin) return;
+      fin.style.display = ''; fin.className = 'upl-final ' + (st || '');
+      fin.innerHTML = (st === 'selesai' ? '<i class="bi bi-check-circle-fill"></i>' : st === 'gagal' ? '<i class="bi bi-exclamation-octagon-fill"></i>' : '<span class="spinner-border spinner-border-sm"></span>') + '<span>' + esc(teks) + '</span>';
+    },
+    tutup(tunda) { setTimeout(() => el.remove(), tunda || 0); }
+  };
+}
+window.addEventListener('beforeunload', e => { if (state.uploading) { e.preventDefault(); e.returnValue = ''; } });
+
 async function simpanDokumen(id, sumber, btn) {
   const daftar = Object.keys(JENIS_DOK).filter(k => sumber[k]);
   for (const k of daftar) if (sumber[k].link && !urlAman(sumber[k].link)) throw new Error('Tautan ' + DOK_PENDEK[k] + ' harus diawali http:// atau https://.');
-  for (let i = 0; i < daftar.length; i++) {
-    const k = daftar[i], s = sumber[k];
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan dokumen ' + (i + 1) + '/' + daftar.length;
-    const r = s.file ? await call('unggahDokumen', id, k, s.file.name, s.file) : await call('tautanDokumen', id, k, s.link);
-    if (!r.ok) throw new Error(JENIS_DOK[k] + ': ' + r.message);
-  }
+  const panel = daftar.some(k => sumber[k].file) ? buatPanelUpload($('#dokList'), 'afterend') : PANEL_KOSONG;
+  panel.init(daftar.map(k => ({ key: k, label: DOK_PENDEK[k], file: sumber[k].file || null })));
+  state.uploading = true;
+  try {
+    for (let i = 0; i < daftar.length; i++) {
+      const k = daftar[i], s = sumber[k];
+      const spin = '<span class="spinner-border spinner-border-sm me-1"></span>';
+      btn.innerHTML = spin + 'Menyimpan dokumen ' + (i + 1) + '/' + daftar.length;
+      try {
+        const r = s.file
+          ? await call('unggahDokumen', id, k, s.file.name, s.file, info => {
+              panel.update(k, info);
+              if (info.fase === 'kirim') btn.innerHTML = spin + DOK_PENDEK[k] + ' (' + (i + 1) + '/' + daftar.length + ') ' + Math.floor(info.loaded / info.total * 100) + '%';
+            })
+          : await call('tautanDokumen', id, k, s.link);
+        if (!r.ok) throw new Error(JENIS_DOK[k] + ': ' + r.message);
+        panel.update(k, { fase: s.file ? 'selesai' : 'link' });
+      } catch (e) { panel.update(k, { fase: 'gagal', pesan: e.message }); throw e; }
+    }
+    panel.akhir('Semua dokumen tersimpan.', 'selesai');
+  } finally { state.uploading = false; }
 }
 
 async function unduh(id, jenis) {
@@ -3554,6 +3679,7 @@ function resetForm() {
   $('#badgeKategoriPenyedia').style.display = 'none';
   sinkronLain('fPenyedia', 'fPenyediaLain'); sinkronLain('fJenis', 'fJenisLain');
   bersihSemuaErr();
+  document.querySelectorAll('#formPengajuan .upl-panel').forEach(x => x.remove());
   renderPenyediaInfo();
 }
 function bukaForm() { if (!state.ref) muatReferensi(); if (state.tab !== 'pengajuan') { state.tab = 'pengajuan'; } state.sideAktif = 'baru'; renderTab(); resetForm(); $('#panelForm').style.display = ''; $('#panelForm').scrollIntoView({ behavior: 'smooth' }); $('#fNama').focus(); }
@@ -3659,6 +3785,8 @@ async function kirimForm(konfirmasi) {
     if (sumber[k].link && !urlAman(sumber[k].link)) { toast('Tautan ' + DOK_PENDEK[k] + ' harus diawali http:// atau https://.', 'warning'); return; }
   }
   const btn = $('#btnKirim'); busy(btn, true, 'Mengirim');
+  const adaBerkas = baru && Object.keys(sumber).some(k => sumber[k].file);
+  const panel = adaBerkas ? buatPanelUpload(btn.parentElement, 'beforebegin') : PANEL_KOSONG;
   try {
     const d = dataForm();
     let res;
@@ -3667,13 +3795,26 @@ async function kirimForm(konfirmasi) {
       d.id = await buatIdPengajuan();
       d.dokumen = {};
       const daftar = Object.keys(JENIS_DOK);
+      panel.init(daftar.map(k => ({ key: k, label: DOK_PENDEK[k], file: sumber[k].file || null })));
+      state.uploading = true;
       for (let i = 0; i < daftar.length; i++) {
         const k = daftar[i], s = sumber[k];
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Mengunggah ' + DOK_PENDEK[k] + ' (' + (i + 1) + '/' + daftar.length + ')';
+        const spin = '<span class="spinner-border spinner-border-sm me-1"></span>';
+        btn.innerHTML = spin + 'Mengunggah ' + DOK_PENDEK[k] + ' (' + (i + 1) + '/' + daftar.length + ')';
         try {
-          d.dokumen[k] = s.file ? (await uploadKeDrive(d.id, k, s.file)).ref : 'link:' + s.link + '|Tautan Dokumen';
+          if (s.file) {
+            d.dokumen[k] = (await uploadKeDrive(d.id, k, s.file, info => {
+              panel.update(k, info);
+              if (info.fase === 'kirim') btn.innerHTML = spin + 'Mengunggah ' + DOK_PENDEK[k] + ' (' + (i + 1) + '/' + daftar.length + ') ' + Math.floor(info.loaded / info.total * 100) + '%';
+            })).ref;
+          } else {
+            d.dokumen[k] = 'link:' + s.link + '|Tautan Dokumen';
+            panel.update(k, { fase: 'link' });
+          }
         } catch (dokErr) {
           console.error('Gagal unggah ' + k + ':', dokErr);
+          panel.update(k, { fase: 'gagal', pesan: dokErr.message });
+          panel.akhir('Pengajuan belum dikirim. Silakan coba lagi.', 'gagal');
           await bersihkanDok(d.dokumen); // batalkan berkas yang sudah terlanjur terunggah
           toast('Pengajuan belum dikirim. Berkas ' + DOK_PENDEK[k] + ' gagal diunggah: ' + dokErr.message, 'danger');
           return;
@@ -3681,10 +3822,13 @@ async function kirimForm(konfirmasi) {
       }
       // 2) Berkas sudah aman, baru simpan pengajuan lengkap dengan referensi dokumennya
       btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan pengajuan';
+      panel.akhir('Menyimpan data pengajuan…', 'proses');
       try {
         res = await call('submitPengajuan', d, !!konfirmasi);
-      } catch (e) { await bersihkanDok(d.dokumen); throw e; }
-      if (!res.ok) { await bersihkanDok(d.dokumen); toast(res.message, 'danger'); return; }
+      } catch (e) { panel.akhir('Data pengajuan gagal disimpan.', 'gagal'); await bersihkanDok(d.dokumen); throw e; }
+      if (!res.ok) { panel.akhir(res.message || 'Data pengajuan gagal disimpan.', 'gagal'); await bersihkanDok(d.dokumen); toast(res.message, 'danger'); return; }
+      panel.akhir('Pengajuan ' + res.id + ' terkirim.', 'selesai');
+      await new Promise(r => setTimeout(r, 700));
       toast('Pengajuan ' + res.id + ' dan dokumen berhasil dikirim.', 'success');
     } else {
       res = await call('revisiPengajuan', state.editingId, d, !!konfirmasi);
@@ -3694,7 +3838,7 @@ async function kirimForm(konfirmasi) {
     resetForm(); tutupForm();
     await muatData();
   } catch (err) { gagal(err); }
-  finally { busy(btn, false); }
+  finally { state.uploading = false; busy(btn, false); }
 }
 
 async function bukaDetailPen(i) {
@@ -3733,6 +3877,7 @@ function bukaDok(id) {
   $('#dokList').innerHTML = Object.keys(JENIS_DOK).map(k => pickerHtml(k, 'fd', p.Dok[k])).join('');
   bootstrap.Modal.getOrCreateInstance($('#modalDok')).show();
 }
+$('#modalDok').addEventListener('hidden.bs.modal', () => document.querySelectorAll('#modalDok .upl-panel').forEach(x => x.remove()));
 $('#btnDokUnggah').addEventListener('click', async () => {
   const sumber = sumberDok($('#dokList'));
   if (!Object.keys(sumber).length) { toast('Pilih dokumen minimal satu.', 'warning'); return; }
