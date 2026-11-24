@@ -600,7 +600,8 @@
       <div id="regMsg" class="alert alert-danger py-2 small" style="display:none"></div>
       <div class="fld">
         <label for="regSatker">Nama satker</label>
-        <input class="form-control" id="regSatker" list="listSatker" placeholder="Ketik untuk mencari nama satker..." required>
+        <select class="form-select" id="regSatker" required></select>
+        <input class="form-control mt-2" id="regSatkerLain" placeholder="Tulis nama OPD/satker Anda" style="display:none" autocomplete="off">
         <datalist id="listSatker"></datalist>
       </div>
       <div class="fld">
@@ -772,6 +773,8 @@
     <!-- Judul halaman (tab selain Dashboard & Pengajuan) -->
     <div class="page-head" id="pageHead" style="display:none"><i class="bi"></i><h2 class="sec-title"></h2></div>
 
+    <div id="bannerPeriode" style="display:none"></div>
+
     <!-- Pane 0: Dashboard -->
     <div id="paneDash">
       <div class="dash-grid" id="dashGrid"></div>
@@ -835,6 +838,24 @@
           <thead><tr><th>Satker</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th style="text-align:right">Tindakan</th></tr></thead>
           <tbody id="tbodyAkun"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Pane 4: Pengaturan Periode Pengajuan (Admin) -->
+    <div id="paneAtur" style="display:none">
+      <div class="small-note mb-3">Tentukan rentang tanggal dan jam (WIB) saat OPD boleh mengajukan paket baru. Di luar rentang ini tombol "Ajukan Paket Baru" dinonaktifkan. Revisi dokumen dan ganti penyedia pada pengajuan yang sudah ada tetap bisa dilakukan.</div>
+      <div class="pform" style="display:block;max-width:560px">
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="perAktif">
+          <label class="form-check-label" for="perAktif">Batasi pengajuan berdasarkan periode</label>
+          <div class="small-note">Jika dimatikan, OPD dapat mengajukan kapan saja.</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-sm-6"><label class="form-label" for="perMulai">Dibuka mulai</label><input type="datetime-local" class="form-control" id="perMulai"></div>
+          <div class="col-sm-6"><label class="form-label" for="perSelesai">Ditutup pada</label><input type="datetime-local" class="form-control" id="perSelesai"></div>
+        </div>
+        <div class="mt-3" id="perStatus"></div>
+        <button class="btn btn-main mt-3" id="btnSimpanPeriode"><i class="bi bi-save me-1"></i> Simpan Pengaturan</button>
       </div>
     </div>
   </main>
@@ -1416,6 +1437,15 @@ const store = (function () {
 })();
 
 // Role helper
+/* ---- Periode pengajuan: helper ---- */
+const fmtWib = ms => new Date(ms).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' WIB';
+function ketPeriode(p) {
+  if (!p || !p.aktif) return { buka: true, pesan: '' };
+  const now = Date.now();
+  if (p.mulai && now < p.mulai) return { buka: false, pesan: 'Pengajuan belum dibuka. Periode pengajuan dimulai ' + fmtWib(p.mulai) + '.' };
+  if (p.selesai && now > p.selesai) return { buka: false, pesan: 'Periode pengajuan sudah ditutup sejak ' + fmtWib(p.selesai) + '. Hubungi Admin bila perlu dibuka kembali.' };
+  return { buka: true, pesan: 'Periode pengajuan dibuka sampai ' + (p.selesai ? fmtWib(p.selesai) : '-') + '.' };
+}
 const isAdmin = r => r === 'Admin' || r === 'Tim Konsolidasi';
 const isPokja = r => r === 'Pokja';
 const isOpd = r => r === 'OPD';
@@ -1531,6 +1561,33 @@ const api = async (fn, ...args) => {
       return { ok: true, message: 'Silakan klik link di email Anda untuk membuat password baru.' };
     }
 
+    /* ---- PERIODE PENGAJUAN (pengaturan/pengajuan) ---- */
+    case 'getPeriode': {
+      const dok = await fbDb.collection('pengaturan').doc('pengajuan').get();
+      const x = dok.exists ? dok.data() : {};
+      return {
+        aktif  : !!x.aktif,
+        mulai  : x.mulai && x.mulai.toMillis ? x.mulai.toMillis() : null,
+        selesai: x.selesai && x.selesai.toMillis ? x.selesai.toMillis() : null
+      };
+    }
+    case 'simpanPeriode': {
+      const [aktif, mulai, selesai] = args;
+      if (!isAdmin(state.role)) return { ok: false, message: 'Hanya Admin yang dapat mengubah pengaturan.' };
+      if (aktif) {
+        if (!mulai || !selesai) return { ok: false, message: 'Tanggal mulai dan selesai wajib diisi.' };
+        if (selesai <= mulai) return { ok: false, message: 'Waktu ditutup harus setelah waktu dibuka.' };
+      }
+      await fbDb.collection('pengaturan').doc('pengajuan').set({
+        aktif: !!aktif,
+        mulai: mulai ? firebase.firestore.Timestamp.fromMillis(mulai) : null,
+        selesai: selesai ? firebase.firestore.Timestamp.fromMillis(selesai) : null,
+        diubah_oleh: state.username || '',
+        diubah_pada: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return { ok: true, message: 'Pengaturan periode pengajuan disimpan.' };
+    }
+
     /* ---- REFERENSI (satker, jenis tenaga, penyedia) ---- */
     case 'getReferensi': {
       const [rS, rJ, rP] = await Promise.all([
@@ -1557,21 +1614,42 @@ const api = async (fn, ...args) => {
       if (String(password || '').length < 8) return { ok: false, message: 'Password minimal 8 karakter.' };
       await authSiap;
 
-      // Cek username unik lewat login_lookup (dibaca per-ID)
-      const ada = await fbDb.collection('login_lookup').doc(uLow).get();
-      if (ada.exists) return { ok: false, message: 'Username sudah dipakai. Pilih username lain.' };
+      const emailAkun = eLow || (uLow + '@sistem.pengajuan.local');
 
-      let cred;
-      try {
-        cred = await fbAuth.createUserWithEmailAndPassword(eLow || (uLow + '@sistem.pengajuan.local'), password);
-      } catch (e) {
-        if (e.code === 'auth/email-already-in-use') return { ok: false, message: 'Email sudah digunakan.' };
-        if (e.code === 'auth/invalid-email') return { ok: false, message: 'Format email tidak valid.' };
-        if (e.code === 'auth/weak-password') return { ok: false, message: 'Password terlalu lemah.' };
-        throw e;
+      // Cek username unik lewat login_lookup (dibaca per-ID).
+      // Entri lama yang menunjuk ke email yang sama adalah sisa akun yang sudah dihapus: boleh dipakai ulang.
+      const ada = await fbDb.collection('login_lookup').doc(uLow).get();
+      if (ada.exists && String((ada.data() || {}).email || '').toLowerCase() !== emailAkun) {
+        return { ok: false, message: 'Username sudah dipakai. Pilih username lain.' };
       }
 
-      const emailAkun = eLow || (uLow + '@sistem.pengajuan.local');
+      let cred, dipulihkan = false;
+      try {
+        cred = await fbAuth.createUserWithEmailAndPassword(emailAkun, password);
+      } catch (e) {
+        if (e.code === 'auth/invalid-email') return { ok: false, message: 'Format email tidak valid.' };
+        if (e.code === 'auth/weak-password') return { ok: false, message: 'Password terlalu lemah.' };
+        if (e.code !== 'auth/email-already-in-use') throw e;
+
+        // Email masih ada di Firebase Authentication walau dokumen Firestore-nya sudah dihapus.
+        try {
+          cred = await fbAuth.signInWithEmailAndPassword(emailAkun, password);
+        } catch (e2) {
+          if (e2.code === 'auth/network-request-failed') return { ok: false, message: 'Tidak dapat terhubung. Periksa koneksi internet.' };
+          if (e2.code === 'auth/too-many-requests') return { ok: false, message: 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.' };
+          // Password berbeda dari akun lama: kirim link reset agar pengguna bisa mengatur password baru, lalu daftar ulang
+          try { await fbAuth.sendPasswordResetEmail(emailAkun); } catch (e3) {}
+          return { ok: false, message: 'Email ini masih tercatat di sistem login (sisa akun yang sudah dihapus) dengan password berbeda. Link reset password sudah dikirim ke ' + emailAkun + '. Atur password baru lewat link tersebut, lalu daftar ulang memakai email dan password baru itu.' };
+        }
+        let profilAda = false;
+        try { profilAda = (await fbDb.collection('users').doc(cred.user.uid).get()).exists; } catch (e4) {}
+        if (profilAda) {
+          await fbAuth.signOut().catch(() => {});
+          return { ok: false, message: 'Email sudah terdaftar. Silakan masuk, atau pakai "Lupa password?" bila lupa password.' };
+        }
+        dipulihkan = true; // akun login ada, profil Firestore hilang: pulihkan profilnya di bawah
+      }
+
       try {
         // Pemesanan username (gagal bila username sudah diambil orang lain pada saat yang sama)
         await fbDb.collection('login_lookup').doc(uLow).set({ email: emailAkun, username_lower: uLow });
@@ -1585,7 +1663,7 @@ const api = async (fn, ...args) => {
           created_at    : firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch (e) {
-        try { await cred.user.delete(); } catch (e2) {}
+        if (!dipulihkan) { try { await cred.user.delete(); } catch (e2) {} }
         await fbAuth.signOut().catch(() => {});
         return { ok: false, message: 'Pendaftaran gagal. Username mungkin sudah dipakai, coba username lain.' };
       }
@@ -1611,12 +1689,27 @@ const api = async (fn, ...args) => {
       const secAuth = secApp.auth();
       let newUid;
       try {
-        const cred = await secAuth.createUserWithEmailAndPassword(eLow, password);
+        let cred;
+        try {
+          cred = await secAuth.createUserWithEmailAndPassword(eLow, password);
+        } catch (e) {
+          if (e.code !== 'auth/email-already-in-use') throw e;
+          // Email masih ada di Firebase Authentication (profil Firestore mungkin sudah dihapus)
+          try {
+            cred = await secAuth.signInWithEmailAndPassword(eLow, password);
+          } catch (e2) {
+            try { await secAuth.sendPasswordResetEmail(eLow); } catch (e3) {}
+            await secApp.delete();
+            return { ok: false, message: 'Email ini masih tercatat di sistem login (sisa akun yang sudah dihapus) dengan password berbeda. Link reset password sudah dikirim ke ' + eLow + '. Pakai email lain, atau hapus dulu pengguna tersebut di Firebase Console > Authentication, lalu buat akun lagi.' };
+          }
+          let profilAda = false;
+          try { profilAda = (await fbDb.collection('users').doc(cred.user.uid).get()).exists; } catch (e4) {}
+          if (profilAda) { await secApp.delete(); return { ok: false, message: 'Email sudah digunakan oleh akun lain yang masih aktif di daftar pengguna.' }; }
+        }
         newUid = cred.user.uid;
         await secAuth.signOut();
       } catch (e) {
         await secApp.delete();
-        if (e.code === 'auth/email-already-in-use') return { ok: false, message: 'Email sudah digunakan oleh akun lain.' };
         throw e;
       }
       await secApp.delete();
@@ -1851,6 +1944,11 @@ const api = async (fn, ...args) => {
     /* ---- SUBMIT PENGAJUAN BARU ---- */
     case 'submitPengajuan': {
       const [d] = args;
+      { // Periode pengajuan dibaca ulang dari server agar tidak bergantung pada data lama di browser
+        const per = await api('getPeriode');
+        const ket = ketPeriode(per);
+        if (!ket.buka) return { ok: false, message: ket.pesan };
+      }
       const kurang = cekWajibServer(d); if (kurang) return { ok: false, message: kurang };
       const newId = d.id || await buatIdPengajuan();
       const dk = d.dokumen || {};
@@ -2182,14 +2280,18 @@ $('#regForm').addEventListener('submit', async e => {
   e.preventDefault();
   const box = $('#regMsg');
   const tampilPesan = (t, ok) => { box.className = 'alert py-2 small alert-' + (ok ? 'success' : 'danger'); box.textContent = t; box.style.display = ''; };
-  const satker = $('#regSatker').value.trim();
-  if (!satker) { tampilPesan('Pilih atau ketik nama satker Anda.'); $('#regSatker').focus(); return; }
+  let satker = $('#regSatker').value.trim();
+  if (!satker) { tampilPesan('Pilih nama OPD/satker Anda.'); $('#regSatker').focus(); return; }
+  if (satker === 'OPD LAINNYA') {
+    satker = $('#regSatkerLain').value.trim().replace(/\s+/g, ' ').toUpperCase();
+    if (satker.length < 3 || satker === 'OPD LAINNYA') { tampilPesan('Tulis nama OPD/satker Anda pada kolom yang tersedia.'); $('#regSatkerLain').focus(); return; }
+  }
   const email = $('#regEmail').value.trim();
   const btn = $('#btnDaftar'); busy(btn, true, 'Mendaftar');
   try {
     const r = await api('daftarAkun', satker, $('#regUser').value, $('#regPass').value, email);
     if (!r.ok) { tampilPesan(r.message); return; }
-    $('#regForm').reset();
+    $('#regForm').reset(); $('#regSatkerLain').style.display = 'none';
     tampilFormMasuk('login');
     pesanLogin(r.message, true);
   } catch (err) { tampilPesan(err.message || 'Terjadi kesalahan.'); }
@@ -2223,6 +2325,29 @@ function setPil(selId, lainId, daftar, nilai) {
   else { el.value = LAIN; $('#' + lainId).value = nilai; }
   sinkronLain(selId, lainId);
 }
+const DAFTAR_OPD = [
+  'DINAS PENDIDIKAN','DINAS KESEHATAN','DINAS PEKERJAAN UMUM DAN PENATAAN RUANG',
+  'DINAS PERUMAHAN, DAN KAWASAN PERMUKIMAN SERTA PERTANAHAN','SATUAN POLISI PAMONG PRAJA','DINAS PEMADAM KEBAKARAN',
+  'BADAN PENANGGULANGAN BENCANA DAERAH','DINAS SOSIAL','DINAS TENAGA KERJA',
+  'DINAS PEMBERDAYAAN PEREMPUAN DAN PELINDUNGAN ANAK SERTA PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA',
+  'DINAS KETAHANAN PANGAN DAN PERTANIAN','DINAS LINGKUNGAN HIDUP','DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL','DINAS PERHUBUNGAN',
+  'DINAS KOMUNIKASI, INFORMATIKA, STATISTIK DAN PERSANDIAN','DINAS KOPERASI USAHA KECIL DAN MENENGAH DAN PERINDUSTRIAN',
+  'DINAS PENANAMAN MODAL DAN PELAYANAN TERPADU SATU PINTU','DINAS KEPEMUDAAN DAN OLAHRAGA','DINAS KEBUDAYAAN DAN PARIWISATA',
+  'DINAS PERPUSTAKAAN DAN KEARSIPAN','DINAS PERDAGANGAN','BAGIAN UMUM','SEKRETARIAT DPRD',
+  'BADAN PENGELOLAAN KEUANGAN DAN ASET DAERAH','BADAN PENDAPATAN DAERAH','BADAN KEPEGAWAIAN DAN PENGEMBANGAN SUMBER DAYA MANUSIA',
+  'BADAN RISET DAN INOVASI DAERAH','INSPEKTORAT','KECAMATAN BANJARSARI','KECAMATAN JEBRES','KECAMATAN LAWEYAN',
+  'KECAMATAN PASARKLIWON','KECAMATAN SERENGAN','BADAN KESATUAN BANGSA DAN POLITIK','OPD LAINNYA'
+];
+(function () { // isi pilihan satker di form daftar (tersedia sebelum login) + input manual untuk OPD LAINNYA
+  const sel = $('#regSatker'), lain = $('#regSatkerLain');
+  sel.innerHTML = '<option value="">— Pilih OPD / satker —</option>' + DAFTAR_OPD.map(o => '<option value="' + esc(o) + '">' + esc(o) + '</option>').join('');
+  $('#listSatker').innerHTML = DAFTAR_OPD.map(o => '<option value="' + esc(o) + '"></option>').join('');
+  sel.addEventListener('change', () => {
+    const l = sel.value === 'OPD LAINNYA';
+    lain.style.display = l ? '' : 'none'; lain.required = l;
+    if (l) lain.focus(); else lain.value = '';
+  });
+})();
 const daftarPenyedia = () => ((state.ref && state.ref.penyedia) || []).map(p => p.nama);
 const daftarJenis = () => (state.ref && state.ref.jenis) || [];
 const getPenyedia = () => getPil('fPenyedia', 'fPenyediaLain');
@@ -2231,7 +2356,7 @@ const adaDiDaftar = (daftar, nama) => daftar.some(x => normNama(x) === normNama(
 
 function isiReferensi() {
   const r = state.ref; if (!r) return;
-  $('#listSatker').innerHTML = r.satker.map(s => '<option value="' + esc(s) + '"></option>').join('');
+  $('#listSatker').innerHTML = DAFTAR_OPD.map(s => '<option value="' + esc(s) + '"></option>').join('');
   isiPilihan('fPenyedia', daftarPenyedia(), '— Pilih calon penyedia —', 'Penyedia Lainnya');
   isiPilihan('gpPenyediaBaru', daftarPenyedia(), '— Pilih calon penyedia —', 'Penyedia Lainnya');
   isiPilihan('fJenis', daftarJenis(), '— Pilih jenis tenaga alih daya —', 'Jenis Lainnya');
@@ -2321,6 +2446,7 @@ function mulaiSesi(s) {
   renderTab();
   muatData();
   if (!state.ref) muatReferensi();
+  state.periode = null; muatPeriode();
   if (admin) muatAkun();
 }
 
@@ -2677,7 +2803,8 @@ function renderSide() {
     h += L('tab:pengajuan', 'bi-grid-1x2-fill', 'Pengajuan per OPD', state.tab === 'pengajuan') +
          L('tab:penyedia', 'bi-bar-chart-steps', 'Akumulasi Penyedia', state.tab === 'penyedia') +
          L('tab:pokja', 'bi-people', 'List Pokja', state.tab === 'pokja') +
-         L('tab:akun', 'bi-person-gear', 'Kelola Pengguna', state.tab === 'akun', '', menunggu || '');
+         L('tab:akun', 'bi-person-gear', 'Kelola Pengguna', state.tab === 'akun', '', menunggu || '') +
+         L('tab:atur', 'bi-calendar-range', 'Periode Pengajuan', state.tab === 'atur');
   } else {
     h += L('tab:pengajuan', 'bi-clipboard-check', 'Verifikasi Dokumen', state.tab === 'pengajuan');
   }
@@ -2689,17 +2816,18 @@ function renderSide() {
 const JUDUL_TAB = {
   penyedia: ['bi-bar-chart-steps', 'Akumulasi Penyedia (UMKK & Non UMKK)'],
   pokja: ['bi-people', 'List Pokja'],
-  akun: ['bi-person-gear', 'Kelola Pengguna']
+  akun: ['bi-person-gear', 'Kelola Pengguna'],
+  atur: ['bi-calendar-range', 'Periode Pengajuan OPD']
 };
 function renderTab() {
   const admin = isAdmin(state.role);
   const pokja = isPokja(state.role);
   let t = state.tab || 'dashboard';
-  const valid = admin ? ['dashboard', 'pengajuan', 'penyedia', 'pokja', 'akun'] : ['dashboard', 'pengajuan'];
+  const valid = admin ? ['dashboard', 'pengajuan', 'penyedia', 'pokja', 'akun', 'atur'] : ['dashboard', 'pengajuan'];
   if (valid.indexOf(t) < 0) t = 'pengajuan';
   state.tab = t;
   renderSide();
-  const pane = { paneDash: t === 'dashboard', paneList: t === 'pengajuan', panePen: admin && t === 'penyedia', panePokja: admin && t === 'pokja', paneAkun: admin && t === 'akun' };
+  const pane = { paneDash: t === 'dashboard', paneList: t === 'pengajuan', panePen: admin && t === 'penyedia', panePokja: admin && t === 'pokja', paneAkun: admin && t === 'akun', paneAtur: admin && t === 'atur' };
   Object.keys(pane).forEach(k => { $('#' + k).style.display = pane[k] ? '' : 'none'; });
   // Hero (ringkasan atas) hanya tampil di Dashboard
   const hero = document.querySelector('.hero'); if (hero) hero.style.display = t === 'dashboard' ? '' : 'none';
@@ -2711,6 +2839,7 @@ function renderTab() {
   ph.style.display = jt ? '' : 'none';
   if (jt) { ph.querySelector('i').className = 'bi ' + jt[0]; ph.querySelector('h2').textContent = jt[1]; }
   if (t === 'dashboard') renderDash();
+  renderBannerPeriode();
 }
 
 function setTab(k) {
@@ -2718,6 +2847,7 @@ function setTab(k) {
   renderTab();
   if (k === 'penyedia') muatPenyedia();
   if (k === 'akun') muatAkun();
+  if (k === 'atur') muatPeriode();
   if (k === 'pokja') renderPokja();
   if (k === 'dashboard' && isAdmin(state.role) && !state.penyedia) muatPenyedia();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2850,6 +2980,49 @@ function renderPokja() {
       '<div class="opd-content" style="display:' + (buka ? '' : 'none') + '">' + detail + '</div></div>';
   }).join('');
 }
+
+/* ---- Periode pengajuan: muat, tampil, simpan ---- */
+const keInputWib = ms => { // ms -> 'YYYY-MM-DDTHH:mm' (WIB)
+  if (!ms) return '';
+  const d = new Date(ms + 7 * 3600000);
+  return d.toISOString().slice(0, 16);
+};
+const dariInputWib = v => v ? Date.parse(v + ':00+07:00') : null;
+async function muatPeriode() {
+  try { state.periode = await call('getPeriode'); } catch (e) { state.periode = null; }
+  renderBannerPeriode();
+  if (isAdmin(state.role)) renderPeriodeAdmin();
+}
+function renderBannerPeriode() {
+  const el = $('#bannerPeriode'); if (!el) return;
+  const p = state.periode;
+  if (!isOpd(state.role) || !p || !p.aktif || !(state.tab === 'dashboard' || state.tab === 'pengajuan')) { el.style.display = 'none'; return; }
+  const k = ketPeriode(p);
+  el.className = 'alert ' + (k.buka ? 'alert-info' : 'alert-warning') + ' d-flex align-items-start gap-2 mb-3';
+  el.innerHTML = '<i class="bi ' + (k.buka ? 'bi-calendar-check' : 'bi-calendar-x') + '"></i><div>' + esc(k.pesan) + '</div>';
+  el.style.display = '';
+  document.querySelectorAll('[data-act="baru"]').forEach(b => { b.classList.toggle('disabled', !k.buka); b.title = k.buka ? 'Ajukan Paket Baru' : k.pesan; });
+}
+function renderPeriodeAdmin() {
+  const p = state.periode || {};
+  if (!$('#perAktif')) return;
+  $('#perAktif').checked = !!p.aktif;
+  $('#perMulai').value = keInputWib(p.mulai);
+  $('#perSelesai').value = keInputWib(p.selesai);
+  const k = ketPeriode(p);
+  $('#perStatus').innerHTML = p.aktif
+    ? '<span class="badge text-bg-' + (k.buka ? 'success' : 'secondary') + '">' + (k.buka ? 'Pengajuan sedang dibuka' : 'Pengajuan sedang ditutup') + '</span> <span class="small-note">' + esc(k.pesan) + '</span>'
+    : '<span class="badge text-bg-success">Tanpa pembatasan: OPD dapat mengajukan kapan saja</span>';
+}
+$('#btnSimpanPeriode').addEventListener('click', async () => {
+  const btn = $('#btnSimpanPeriode'); busy(btn, true, 'Menyimpan');
+  try {
+    const r = await call('simpanPeriode', $('#perAktif').checked, dariInputWib($('#perMulai').value), dariInputWib($('#perSelesai').value));
+    if (!r.ok) { toast(r.message, 'warning'); return; }
+    toast(r.message, 'success');
+    await muatPeriode();
+  } catch (e) { gagal(e); } finally { busy(btn, false); }
+});
 
 async function muatAkun() {
   try { state.akun = (await call('getAkun')).akun; renderAkun(); renderTab(); sinkronLookup(); } catch (e) { gagal(e); }
@@ -3682,7 +3855,14 @@ function resetForm() {
   document.querySelectorAll('#formPengajuan .upl-panel').forEach(x => x.remove());
   renderPenyediaInfo();
 }
-function bukaForm() { if (!state.ref) muatReferensi(); if (state.tab !== 'pengajuan') { state.tab = 'pengajuan'; } state.sideAktif = 'baru'; renderTab(); resetForm(); $('#panelForm').style.display = ''; $('#panelForm').scrollIntoView({ behavior: 'smooth' }); $('#fNama').focus(); }
+function bukaForm() {
+  if (isOpd(state.role)) {
+    const k = ketPeriode(state.periode);
+    if (!k.buka) { toast(k.pesan, 'warning'); return; }
+  }
+  bukaFormInti();
+}
+function bukaFormInti() { if (!state.ref) muatReferensi(); if (state.tab !== 'pengajuan') { state.tab = 'pengajuan'; } state.sideAktif = 'baru'; renderTab(); resetForm(); $('#panelForm').style.display = ''; $('#panelForm').scrollIntoView({ behavior: 'smooth' }); $('#fNama').focus(); }
 function tutupForm() { $('#panelForm').style.display = 'none'; if (state.sideAktif === 'baru') { state.sideAktif = ''; if (state.role) renderSide(); } }
 $('#btnBatalEdit').addEventListener('click', () => { resetForm(); tutupForm(); });
 
