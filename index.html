@@ -1446,6 +1446,14 @@ function ketPeriode(p) {
   if (p.selesai && now > p.selesai) return { buka: false, pesan: 'Periode pengajuan sudah ditutup sejak ' + fmtWib(p.selesai) + '. Hubungi Admin bila perlu dibuka kembali.' };
   return { buka: true, pesan: 'Periode pengajuan dibuka sampai ' + (p.selesai ? fmtWib(p.selesai) : '-') + '.' };
 }
+// OPD saat periode tertutup: semua fitur pengajuan dikunci. Mengembalikan true bila diblokir.
+function blokOpd(tampilToast) {
+  if (!isOpd(state.role)) return false;
+  const k = ketPeriode(state.periode);
+  if (k.buka) return false;
+  if (tampilToast) toast(k.pesan, 'warning');
+  return true;
+}
 const isAdmin = r => r === 'Admin' || r === 'Tim Konsolidasi';
 const isPokja = r => r === 'Pokja';
 const isOpd = r => r === 'OPD';
@@ -1982,6 +1990,7 @@ const api = async (fn, ...args) => {
     /* ---- GANTI PENYEDIA (OPD) ---- */
     case 'gantiPenyediaOpd': {
       const [id, penyediaBaru, hpsBaru, catatan] = args;
+      { const k = ketPeriode(await api('getPeriode')); if (!k.buka) return { ok: false, message: k.pesan }; }
       const ref  = fbDb.collection('pengajuan').doc(id);
       const snap = await ref.get();
       if (!snap.exists) throw new Error('Pengajuan tidak ditemukan.');
@@ -2029,6 +2038,7 @@ const api = async (fn, ...args) => {
     /* ---- REVISI PENGAJUAN ---- */
     case 'revisiPengajuan': {
       const [id, d] = args;
+      { const k = ketPeriode(await api('getPeriode')); if (!k.buka) return { ok: false, message: k.pesan }; }
       const kurangR = cekWajibServer(d); if (kurangR) return { ok: false, message: kurangR };
       await fbDb.collection('pengajuan').doc(id).update({
         nama_paket: d.nama, calon_penyedia: d.penyedia, nilai_hps: d.nilai,
@@ -2147,6 +2157,7 @@ const api = async (fn, ...args) => {
     /* ---- DOKUMEN (Supabase Storage & Tautan) — dipakai tombol "Lengkapi / Ganti berkas" ---- */
     case 'unggahDokumen': {
       const [id, jenis, , file, onProg] = args;
+      if (isOpd(state.role)) { const k = ketPeriode(await api('getPeriode')); if (!k.buka) return { ok: false, message: k.pesan }; }
       try {
         const up = await uploadKeDrive(id, jenis, file, onProg);
         try {
@@ -2160,6 +2171,7 @@ const api = async (fn, ...args) => {
     }
     case 'tautanDokumen': {
       const [id, jenis, tautan] = args;
+      if (isOpd(state.role)) { const k = ketPeriode(await api('getPeriode')); if (!k.buka) return { ok: false, message: k.pesan }; }
       if (!urlAman(tautan)) throw new Error('Tautan harus diawali http:// atau https://.');
       await fbDb.collection('pengajuan').doc(id).update({ [kolomDok(jenis)]: 'link:' + tautan + '|Tautan Dokumen' });
       return { ok: true, nama: 'Tautan Dokumen' };
@@ -2559,6 +2571,9 @@ function aksiKartu(p) {
     let html = '<button class="btn btn-sm btn-line" data-act="cetak-kertas" data-id="' + id + '" title="Cetak Kertas Kerja Hasil Formulir"><i class="bi bi-printer me-1 text-warning"></i>Cetak</button>' +
       '<button class="btn btn-sm btn-line" data-act="klarif" data-id="' + id + '"><i class="bi bi-chat-left-text me-1"></i>Klarifikasi</button>';
     
+    if (blokOpd(false)) {
+      return html + '<span class="small-note ms-1"><i class="bi bi-lock-fill me-1"></i>Pengajuan dikunci di luar periode</span>';
+    }
     // Fitur 6: Ganti Penyedia ketika ditolak verifikasi Tahap 1
     if (p.Status === 'Penyedia Ditolak') {
       html += '<button class="btn btn-sm btn-warn" data-act="gantipen" data-id="' + id + '"><i class="bi bi-arrow-repeat me-1"></i>Ganti Penyedia</button>';
@@ -2988,6 +3003,12 @@ const keInputWib = ms => { // ms -> 'YYYY-MM-DDTHH:mm' (WIB)
   return d.toISOString().slice(0, 16);
 };
 const dariInputWib = v => v ? Date.parse(v + ':00+07:00') : null;
+setInterval(() => { // evaluasi ulang tiap menit; muat ulang dari server tiap 5 menit
+  if (!state.role || !isOpd(state.role)) return;
+  const t = Date.now();
+  if (!state.periodeTs || t - state.periodeTs > 300000) { state.periodeTs = t; muatPeriode().then(() => { renderGrid(); renderSide(); }); }
+  else { renderBannerPeriode(); renderGrid(); }
+}, 60000);
 async function muatPeriode() {
   try { state.periode = await call('getPeriode'); } catch (e) { state.periode = null; }
   renderBannerPeriode();
@@ -2998,10 +3019,10 @@ function renderBannerPeriode() {
   const p = state.periode;
   if (!isOpd(state.role) || !p || !p.aktif || !(state.tab === 'dashboard' || state.tab === 'pengajuan')) { el.style.display = 'none'; return; }
   const k = ketPeriode(p);
-  el.className = 'alert ' + (k.buka ? 'alert-info' : 'alert-warning') + ' d-flex align-items-start gap-2 mb-3';
-  el.innerHTML = '<i class="bi ' + (k.buka ? 'bi-calendar-check' : 'bi-calendar-x') + '"></i><div>' + esc(k.pesan) + '</div>';
+  el.className = 'alert ' + (k.buka ? 'alert-info' : 'alert-danger') + ' d-flex align-items-start gap-2 mb-3';
+  el.innerHTML = '<i class="bi ' + (k.buka ? 'bi-calendar-check' : 'bi-lock-fill') + '"></i><div>' + (k.buka ? '' : '<b>Fitur pengajuan dikunci.</b> ') + esc(k.pesan) + '</div>';
   el.style.display = '';
-  document.querySelectorAll('[data-act="baru"]').forEach(b => { b.classList.toggle('disabled', !k.buka); b.title = k.buka ? 'Ajukan Paket Baru' : k.pesan; });
+  document.querySelectorAll('[data-act="baru"],.side-cta').forEach(b => { b.classList.toggle('disabled', !k.buka); b.title = k.buka ? 'Ajukan Paket Baru' : k.pesan; });
 }
 function renderPeriodeAdmin() {
   const p = state.periode || {};
@@ -3290,6 +3311,7 @@ document.addEventListener('click', e => {
   const id = b.dataset.id, act = b.dataset.act;
   if (act === 'pokja-semua') { document.querySelectorAll('#listPokja .opd-group-card').forEach(c => { state.expandedOpd[c.id] = b.dataset.buka === '1'; }); return renderPokja(); }
   if (act === 'akun') return ubahAkun(b.dataset.user, b.dataset.status, b);
+  if (['baru', 'edit', 'dok', 'gantipen'].indexOf(act) >= 0 && blokOpd(true)) return;
   if (act === 'baru') { tutupSide(); return bukaForm(); }
   if (act === 'tabpen') return setTab('penyedia');
   if (act === 'refresh') { return muatData(); }
