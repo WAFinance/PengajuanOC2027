@@ -441,6 +441,12 @@
     .mini-pct { font-size: .78rem; color: var(--muted); margin-top: .3rem; font-weight: 600; }
 
     /* ---------- Tabel Penyedia ---------- */
+    .tbl-payung { table-layout: fixed; font-size: clamp(.62rem, 1.15vw, .8rem); }
+    .tbl-payung thead th { white-space: normal; text-align: center; padding: .3rem .2rem; line-height: 1.15; font-size: inherit; }
+    .tbl-payung thead th:nth-child(1) { width: 2.2rem; } .tbl-payung thead th:nth-child(2) { width: 26%; text-align: left; }
+    .tbl-payung td { padding: .18rem .3rem; vertical-align: middle; line-height: 1.15; }
+    .tbl-payung td:nth-child(2) { font-size: inherit; overflow-wrap: anywhere; }
+    .tbl-payung td .bi { font-size: 1rem !important; }
     .tbl { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
     .tbl thead th { text-align: left; font-size: .78rem; font-weight: 700; color: var(--muted); padding: .85rem 1rem; background: var(--card2); border-bottom: 1px solid var(--line); white-space: nowrap; }
     .tbl td { padding: .95rem 1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -714,6 +720,7 @@
             </div>
             <div class="fld">
               <label for="fPenyedia">Calon penyedia</label>
+              <a href="#" class="small ms-2 fw-semibold" data-act="info-payung"><i class="bi bi-info-circle me-1"></i>Lihat daftar penyedia kontrak payung</a>
               <select class="form-select" id="fPenyedia" required></select>
               <input class="form-control mt-2" id="fPenyediaLain" maxlength="200" placeholder="Tulis nama penyedia (PT/CV) secara manual" autocomplete="off" style="display:none">
               <div id="badgeKategoriPenyedia" class="mt-1" style="display:none"></div>
@@ -861,6 +868,24 @@
   </main>
 </div>
 
+<!-- =============================== MODAL INFO PENYEDIA KONTRAK PAYUNG =============================== -->
+<div class="modal fade" id="modalPayung" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:min(1140px,98vw)">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title"><i class="bi bi-building-check text-success me-2"></i>Penyedia Kontrak Payung &amp; Jenis Tenaga Alih Daya</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body py-2">
+        <div class="small-note mb-1">Tanda <b>✓</b> berarti penyedia ikut kontrak payung untuk jenis tenaga tersebut.</div>
+        <input class="form-control form-control-sm mb-2" id="cariPayung" placeholder="Cari nama penyedia...">
+        <table class="tbl tbl-payung" id="tblPayung"></table>
+      </div>
+      <div class="modal-footer py-1"><button type="button" class="btn btn-line btn-sm" data-bs-dismiss="modal">Tutup</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- =============================== MODAL GANTI PENYEDIA (OPD) =============================== -->
 <div class="modal fade" id="modalGantiPen" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -881,6 +906,7 @@
         </div>
         <div class="fld">
           <label for="gpPenyediaBaru">Calon Penyedia Baru</label>
+          <a href="#" class="small ms-2 fw-semibold" data-act="info-payung"><i class="bi bi-info-circle me-1"></i>Daftar penyedia kontrak payung</a>
           <select class="form-select" id="gpPenyediaBaru" required></select>
           <input class="form-control mt-2" id="gpPenyediaLain" maxlength="200" placeholder="Tulis nama penyedia (PT/CV) secara manual" autocomplete="off" style="display:none">
           <div id="gpBadgeKategori" class="mt-1" style="display:none"></div>
@@ -1440,7 +1466,8 @@ const store = (function () {
 /* ---- Periode pengajuan: helper ---- */
 const fmtWib = ms => new Date(ms).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' WIB';
 function ketPeriode(p) {
-  if (!p || !p.aktif) return { buka: true, pesan: '' };
+  if (!p || p.error) return { buka: false, pesan: 'Pengaturan periode pengajuan belum dapat dimuat' + (p && p.pesan ? ' (' + p.pesan + ')' : '') + '. Muat ulang halaman; jika berulang, hubungi Admin.' };
+  if (!p.aktif) return { buka: true, pesan: '' };
   const now = Date.now();
   if (p.mulai && now < p.mulai) return { buka: false, pesan: 'Pengajuan belum dibuka. Periode pengajuan dimulai ' + fmtWib(p.mulai) + '.' };
   if (p.selesai && now > p.selesai) return { buka: false, pesan: 'Periode pengajuan sudah ditutup sejak ' + fmtWib(p.selesai) + '. Hubungi Admin bila perlu dibuka kembali.' };
@@ -2360,6 +2387,41 @@ const DAFTAR_OPD = [
     if (l) lain.focus(); else lain.value = '';
   });
 })();
+/* ---- Info kontrak payung: penyedia x jenis tenaga (1 = ikut kontrak payung) ---- */
+const PAYUNG_SINGKAT = ['Kebersihan Fasilitas Olahraga/ Wisata', 'Kebersihan Gedung Kantor', 'Kebersihan Pertamanan Kota', 'Kebersihan Persampahan Kota', 'Kebersihan Lingkungan Kelurahan', 'Keamanan (Ketua Regu)', 'Keamanan (Anggota)', 'Pengemudi (< 3500 kg)', 'Pengemudi (≥ 3500 kg)'];
+const PAYUNG_JENIS = ['Kebersihan Fasilitas Olahraga/Wisata', 'Kebersihan Gedung Kantor', 'Kebersihan Pertamanan Kota', 'Kebersihan Persampahan Kota',
+  'Kebersihan Lingkungan Kelurahan', 'Keamanan (Ketua Regu)', 'Keamanan (Anggota)', 'Pengemudi (< 3500 kg)', 'Pengemudi (≥ 3500 kg)'];
+const PAYUNG = [
+  ['PERUMDA PAU PEDARINGAN KOTA SURAKARTA', '111110011'], ['PT ARZATAMA SENTOSA ABADI', '111010010'], ['PT BINTANG MITRA PRATAMA', '111111100'],
+  ['PT BRADDA SOLO INDO', '111111100'], ['PT CAKRAWALA KARUNIA SENTOSA', '111110011'], ['PT CEMPAKA KARUNIA UTAMA', '111110011'],
+  ['PT DELTA ALFA RUKUN SEJAHTERA', '111110011'], ['PT DEVASTU TIRTA NAWASENA', '111110011'], ['PT FADIYA KENCANA MULYA', '010111110'],
+  ['PT INTEGRITAS TATA INSANI', '111111100'], ['PT INTENS WIRA SEMBADA', '010000111'], ['PT INTI SARANA WIJAYA', '111111111'],
+  ['PT INVESTAMA KOMANDO SECURITY', '111111111'], ['PT JAYA WIRA MANGGALA', '111111100'], ['PT KARUNIA MEKAR SEJATI', '111111101'],
+  ['PT LANTAR ABYUDAYA PERKASA', '111110010'], ['PT LUVINA PADMA PERSADA', '111110000'], ['PT MEGA DAYA REKSA ABADI', '000010000'],
+  ['PT MUHANDAS PERMATA SARANA', '111111100'], ['PT SENAPATI WIJAYA ABADI', '010010000'], ['PT WIDORO KANDANG', '111110010']
+];
+function renderPayung(q) {
+  q = String(q || '').trim().toLowerCase();
+  let h = '<thead><tr><th>No.</th><th>Nama Perusahaan</th>' + PAYUNG_SINGKAT.map(j => '<th>' + esc(j) + '</th>').join('') + '</tr></thead><tbody>';
+  let n = 0;
+  PAYUNG.forEach((r, i) => {
+    if (q && r[0].toLowerCase().indexOf(q) < 0) return;
+    n++;
+    h += '<tr><td style="text-align:center">' + (i + 1) + '</td><td class="fw-semibold">' + esc(r[0]) + '</td>' +
+      r[1].split('').map(c => '<td style="text-align:center">' + (c === '1' ? '<i class="bi bi-check-lg text-success"></i>' : '<span class="text-muted">-</span>') + '</td>').join('') + '</tr>';
+  });
+  if (!n) h += '<tr><td colspan="' + (PAYUNG_JENIS.length + 2) + '" class="text-center text-muted">Penyedia tidak ditemukan.</td></tr>';
+  $('#tblPayung').innerHTML = h + '</tbody>';
+}
+function bukaInfoPayung() {
+  $('#cariPayung').value = ''; renderPayung('');
+  bootstrap.Modal.getOrCreateInstance($('#modalPayung')).show();
+}
+$('#cariPayung').addEventListener('input', e => renderPayung(e.target.value));
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[data-act="info-payung"]'); if (!a) return;
+  e.preventDefault(); bukaInfoPayung();
+});
 const daftarPenyedia = () => ((state.ref && state.ref.penyedia) || []).map(p => p.nama);
 const daftarJenis = () => (state.ref && state.ref.jenis) || [];
 const getPenyedia = () => getPil('fPenyedia', 'fPenyediaLain');
@@ -3010,14 +3072,14 @@ setInterval(() => { // evaluasi ulang tiap menit; muat ulang dari server tiap 5 
   else { renderBannerPeriode(); renderGrid(); }
 }, 60000);
 async function muatPeriode() {
-  try { state.periode = await call('getPeriode'); } catch (e) { state.periode = null; }
+  try { state.periode = await call('getPeriode'); } catch (e) { state.periode = { error: true, pesan: e && e.message ? e.message : '' }; console.error('getPeriode gagal:', e); }
   renderBannerPeriode();
   if (isAdmin(state.role)) renderPeriodeAdmin();
 }
 function renderBannerPeriode() {
   const el = $('#bannerPeriode'); if (!el) return;
   const p = state.periode;
-  if (!isOpd(state.role) || !p || !p.aktif || !(state.tab === 'dashboard' || state.tab === 'pengajuan')) { el.style.display = 'none'; return; }
+  if (!isOpd(state.role) || !p || (!p.aktif && !p.error) || !(state.tab === 'dashboard' || state.tab === 'pengajuan')) { el.style.display = 'none'; return; }
   const k = ketPeriode(p);
   el.className = 'alert ' + (k.buka ? 'alert-info' : 'alert-danger') + ' d-flex align-items-start gap-2 mb-3';
   el.innerHTML = '<i class="bi ' + (k.buka ? 'bi-calendar-check' : 'bi-lock-fill') + '"></i><div>' + (k.buka ? '' : '<b>Fitur pengajuan dikunci.</b> ') + esc(k.pesan) + '</div>';
