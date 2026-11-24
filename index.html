@@ -441,12 +441,13 @@
     .mini-pct { font-size: .78rem; color: var(--muted); margin-top: .3rem; font-weight: 600; }
 
     /* ---------- Tabel Penyedia ---------- */
-    .tbl-payung { table-layout: fixed; font-size: clamp(.62rem, 1.15vw, .8rem); }
-    .tbl-payung thead th { white-space: normal; text-align: center; padding: .3rem .2rem; line-height: 1.15; font-size: inherit; }
-    .tbl-payung thead th:nth-child(1) { width: 2.2rem; } .tbl-payung thead th:nth-child(2) { width: 26%; text-align: left; }
-    .tbl-payung td { padding: .18rem .3rem; vertical-align: middle; line-height: 1.15; }
-    .tbl-payung td:nth-child(2) { font-size: inherit; overflow-wrap: anywhere; }
-    .tbl-payung td .bi { font-size: 1rem !important; }
+    .tbl.tbl-payung { table-layout: fixed; font-size: clamp(.6rem, 1.1vw, .78rem); }
+    .tbl.tbl-payung thead th { white-space: normal !important; text-align: center; padding: .35rem .15rem; line-height: 1.15; font-size: .92em; overflow-wrap: anywhere; hyphens: auto; vertical-align: middle; }
+    .tbl.tbl-payung thead th:nth-child(1) { width: 2rem; padding-left: .3rem; }
+    .tbl.tbl-payung thead th:nth-child(2) { width: 22%; text-align: left; padding-left: .5rem; }
+    .tbl.tbl-payung td { padding: .18rem .25rem; vertical-align: middle; line-height: 1.15; }
+    .tbl.tbl-payung td:nth-child(2) { overflow-wrap: anywhere; }
+    .tbl.tbl-payung td .bi { font-size: 1rem !important; }
     .tbl { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
     .tbl thead th { text-align: left; font-size: .78rem; font-weight: 700; color: var(--muted); padding: .85rem 1rem; background: var(--card2); border-bottom: 1px solid var(--line); white-space: nowrap; }
     .tbl td { padding: .95rem 1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
